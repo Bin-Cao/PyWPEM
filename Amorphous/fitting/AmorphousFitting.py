@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from math import sin, pi
 
-def Amorphous_fit(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
+def Amorphous_fitting(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
     """
     Amorphous Qualitative Description Module
 

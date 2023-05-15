@@ -31,7 +31,7 @@ class profile:
             raise TypeError("'wavelength' must be either of: float, int or str")
         self.two_theta_range = two_theta_range
 
-    def generate(self, filepath = None, latt = None, structure_factor = None,):
+    def generate(self, filepath = None,):
         """
         for a single crystal
         Computes the XRD pattern and save to csv file
@@ -41,8 +41,6 @@ class profile:
                 two_thetas to calculate in degrees. Defaults to (0, 90). Set to
                 None if you want all diffracted beams within the limiting
                 sphere of radius 2 / wavelength.
-                structure_factor : ['P',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
-                latt: lattice constants : [a, b, c, al1, al2, al3]
         return 
         latt: lattice constants : [a, b, c, al1, al2, al3]
         structure_factor : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  

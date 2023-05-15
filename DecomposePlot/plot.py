@@ -9,11 +9,22 @@ import os
 class Decomposedpeaks():
     # To draw the decomposition peak.
     def decomposition_peak(self, lowboundary, upboundary, wavelength,name = None, Macromolecule = False,phase = 1,Pic_Title = False):
-        self.lowboundary = lowboundary
-        self.upboundary = upboundary
-        self.wavelength = wavelength
-        self.Macromolecule = Macromolecule
-        self.phace = phase
+        """
+        :param lowboundary : float, the smallest diffraction angle studied
+
+        :param upboundary : float, the largest diffraction angle studied 
+
+        :param wavelength : list, the wavelength of the X rays
+
+        :param name : list, assign the name of each crystal through this parameter
+
+        :param Macromolecule: whether it contains amorphous, used in amorphous fitting
+
+        :param phase: the number of compounds contained in diffraction signals
+
+        :param Pic_Title: Whether to display the title of the pictures
+        
+        """
 
         assign = 0
         if name == None:
@@ -26,24 +37,26 @@ class Decomposedpeaks():
 
         # compare with no_bac intensity
         origianl_data = pd.read_csv(r'intensity.csv', header=None, names=['two_theta', 'intensity'])
-        index1 = np.where((origianl_data.two_theta < self.lowboundary) | (origianl_data.two_theta > self.upboundary))
+        index1 = np.where((origianl_data.two_theta < lowboundary) | (origianl_data.two_theta > upboundary))
         origianl_data = origianl_data.drop(index1[0])
         o_x = np.array(origianl_data.two_theta)
         o_y = np.array(origianl_data.intensity)
 
-        if self.Macromolecule == False:
+        # Define the font of images
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.size'] = 18 
 
+        if Macromolecule == False:
             # if Macromolecule == False, real and fitting profile are total intensity contains bac!
-            if  self.phace == 1:
+            if  phase == 1:
 
                 fitting_data = pd.read_csv(r'./DecomposedComponents/fitting_profile.csv', header=None,  names=['two_theta', 'intensity'])
-                index2 = np.where((fitting_data.two_theta < self.lowboundary) | (fitting_data.two_theta > self.upboundary))
+                index2 = np.where((fitting_data.two_theta < lowboundary) | (fitting_data.two_theta > upboundary))
                 fitting_data = fitting_data.drop(index2[0])
 
                 dec_peaks_data = pd.read_csv(r'./DecomposedComponents/sub_peaks.csv', header=0)
-                index3 = np.where((dec_peaks_data.mu_i < self.lowboundary) | (dec_peaks_data.mu_i > self.upboundary))
+                index3 = np.where((dec_peaks_data.mu_i < lowboundary) | (dec_peaks_data.mu_i > upboundary))
                 dec_peaks_data = dec_peaks_data.drop(index3[0])
-
 
                 f_x = np.array(fitting_data.two_theta)
                 f_y = np.array(fitting_data.intensity)
@@ -63,13 +76,13 @@ class Decomposedpeaks():
                 else:
                     print ('the input peaks are too many!')
 
-                plt.xlabel('2Theta/(°)', size=10)
-                plt.ylabel('Intensity/(a.u.)', size=10)
+                plt.xlabel('2\u03b8\u00B0')
+                plt.ylabel('I (a.u.)')
                 if Pic_Title == False:
                     pass
                 else:
                     plt.title('Decomposition peak', size=20)
-                plt.plot(o_x, o_y, label="Real intensity")
+                plt.plot(o_x, o_y, label="real intensity")
                 plt.plot(f_x, f_y, label="WPEM fitting profile")
                 for i in range(k):
                     plt.plot(o_x, peak_intens[i])
@@ -77,12 +90,11 @@ class Decomposedpeaks():
                 plt.savefig('./DecomposedComponents/Decomposed_peaks.png', dpi=800)
                 plt.show()
 
-
-            elif type(self.phace) == int:
+            elif type(phase) == int:
                 DecomposepeaksIntensity = []
-                for i in range(self.phace):
+                for i in range(phase):
                     dec_peaks_data = pd.read_csv(r'./DecomposedComponents/System{Task}.csv'.format(Task=i), header=0)
-                    index4 = np.where((dec_peaks_data.mu_i < self.lowboundary) | (dec_peaks_data.mu_i > self.upboundary))
+                    index4 = np.where((dec_peaks_data.mu_i < lowboundary) | (dec_peaks_data.mu_i > upboundary))
                     dec_peaks_data = dec_peaks_data.drop(index4[0])
 
                     o_x = np.array(origianl_data.two_theta)
@@ -92,7 +104,6 @@ class Decomposedpeaks():
                     cal_gamma = np.array(dec_peaks_data.gamma_i)
                     cal_sigma = np.array(dec_peaks_data.sigma_i)
                    
-
                     peak_intens = []
 
                     k = len(cal_mu)
@@ -113,19 +124,19 @@ class Decomposedpeaks():
                     MaxP_diffraction_angle = o_x[maxmum_peak_index]
                     MaxP_diffraction_intensity = total_intens[maxmum_peak_index]
 
-                    value = np.sin(MaxP_diffraction_angle / 2 * np.pi / 180) / self.wavelength[0]
+                    value = np.sin(MaxP_diffraction_angle / 2 * np.pi / 180) / wavelength[0]
                    
                     MaxP_diffraction_angle = round(MaxP_diffraction_angle,3)
                     MaxP_diffraction_intensity = round(MaxP_diffraction_intensity,3)
                     value = round(value,3)
 
                     
-                    plt.xlabel('2Theta/(°)', size=10)
-                    plt.ylabel('Intensity/(a.u.)', size=10)
+                    plt.xlabel('2\u03b8\u00B0')
+                    plt.ylabel('I (a.u.)')
                     if Pic_Title == False:
                         pass
                     else:
-                        plt.title(' First peak diffraction angle = {angle}, diffraction intensity = {inten} \n System{Task} : [sin(theta)/wavelength] = {value}'.format(angle = MaxP_diffraction_angle, inten = MaxP_diffraction_intensity,Task = i, value = value) , size=12)
+                        plt.title('first peak diffraction angle = {angle}, diffraction intensity = {inten} \n System{Task} : [sin(theta)/wavelength] = {value}'.format(angle = MaxP_diffraction_angle, inten = MaxP_diffraction_intensity,Task = i, value = value) , size=12)
                     
                     if assign == False:
                         plt.plot(o_x, total_intens, label="{}".format(name[i]))
@@ -143,15 +154,15 @@ class Decomposedpeaks():
                         plt.show()
 
                 area = []   # defined for computing the volume fraction of components by the intensity area
-                plt.xlabel('2Theta/(°)', size=10)
-                plt.ylabel('Intensity/(a.u.)', size=10)
+                plt.xlabel('2\u03b8\u00B0')
+                plt.ylabel('I (a.u.)')
                 if Pic_Title == False:
                     pass
                 else:
                     plt.title('Decomposited peaks - all components', size=15)
-                plt.plot(o_x, o_y, label="Real intensity")
+                plt.plot(o_x, o_y, label="real intensity")
                 if assign == False:
-                    for l in range(self.phace):
+                    for l in range(phase):
                         plt.plot(o_x, DecomposepeaksIntensity[l],label="Decomposed profile of system  {System}".format(System = l))
                         
                         # calculate the integral area of each component
@@ -160,9 +171,8 @@ class Decomposedpeaks():
                     plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
                     plt.show()
                 else:
-                    for l in range(self.phace):
+                    for l in range(phase):
                             plt.plot(o_x, DecomposepeaksIntensity[l],label="{System}".format(System = name[l]))
-                            
                             # calculate the integral area of each component
                             area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))      
                     plt.legend()
@@ -172,19 +182,18 @@ class Decomposedpeaks():
               
                 if assign == False:
                     # save the 2theta-intensity file of decomposed components
-                    for l in range(self.phace):
+                    for l in range(phase):
                         with open(os.path.join('DecomposedComponents','Profile_Decomposed_system{System}.csv'.format(System = l)), 'w') as wfid:
                             for j in range(len(o_x)):
                                 print(o_x[j], end=', ', file=wfid)
                                 print(float(DecomposepeaksIntensity[l][j]), file=wfid)
                 elif assign == True:
                     # save the 2theta-intensity file of decomposed components
-                    for l in range(self.phace):
+                    for l in range(phase):
                         with open(os.path.join('DecomposedComponents','{System}.csv'.format(System = name[l])), 'w') as wfid:
                             for j in range(len(o_x)):
                                 print(o_x[j], end=', ', file=wfid)
                                 print(float(DecomposepeaksIntensity[l][j]), file=wfid)
-
 
                 Sum = 0.0
                 for system in range(len(area)):
@@ -198,34 +207,32 @@ class Decomposedpeaks():
                 with open(os.path.join('WPEMFittingResults', 'VolumeFraction_estimate_integral_area.txt'), 'w') as wfid:
                     print('The estimated volume fraction in % :', file=wfid)
                     print(str(Fraction), file=wfid)
-
             else:
-                print('Input a error type of ', self.phace)
+                print('Input a error type of ', phase)
     
     
-        elif self.Macromolecule == True:
+        elif Macromolecule == True:
             # if Macromolecule == True, real and fitting profile are total intensity contains bac! 
 
             # fitted crystalline inten
             fitting_data = pd.read_csv(r'./DecomposedComponents/fitting_profile.csv', header=None,  names=['two_theta', 'intensity'])
-            index2 = np.where((fitting_data.two_theta < self.lowboundary) | (fitting_data.two_theta > self.upboundary))
+            index2 = np.where((fitting_data.two_theta < lowboundary) | (fitting_data.two_theta > upboundary))
             fitting_data = fitting_data.drop(index2[0])
          
-            if  self.phace == 1:  
-
+            if  phase == 1:  
                 # fitted crystalline peaks
                 dec_peaks_data = pd.read_csv(r'./DecomposedComponents/sub_peaks.csv', header=0)
-                index3 = np.where((dec_peaks_data.mu_i < self.lowboundary) | (dec_peaks_data.mu_i > self.upboundary))
+                index3 = np.where((dec_peaks_data.mu_i < lowboundary) | (dec_peaks_data.mu_i > upboundary))
                 dec_peaks_data = dec_peaks_data.drop(index3[0])
 
                 # fitted amorphous crystalline inten
                 Amorphous_fitting_data = pd.read_csv(r'./DecomposedComponents/M_Amorphous_whole_profile.csv', header=None,  names=['two_theta', 'intensity'])
-                index4 = np.where((Amorphous_fitting_data.two_theta < self.lowboundary) | (Amorphous_fitting_data.two_theta > self.upboundary))
+                index4 = np.where((Amorphous_fitting_data.two_theta < lowboundary) | (Amorphous_fitting_data.two_theta > upboundary))
                 Amorphous_fitting_data = Amorphous_fitting_data.drop(index4[0])
 
                 # fitted amorphous crystalline peaks
                 Amorphous_dec_peaks_data = pd.read_csv(r'./DecomposedComponents/M_Amorphous_peaks.csv', header=0)
-                index5 = np.where((Amorphous_dec_peaks_data.mu_i < self.lowboundary) | (Amorphous_dec_peaks_data.mu_i > self.upboundary))
+                index5 = np.where((Amorphous_dec_peaks_data.mu_i < lowboundary) | (Amorphous_dec_peaks_data.mu_i > upboundary))
                 Amorphous_dec_peaks_data = Amorphous_dec_peaks_data.drop(index5[0])
 
                 f_x = np.array(fitting_data.two_theta)
@@ -235,14 +242,12 @@ class Decomposedpeaks():
                 cal_A = np.array(dec_peaks_data.Ai)
                 cal_gamma = np.array(dec_peaks_data.gamma_i)
                 cal_sigma = np.array(dec_peaks_data.sigma_i)
-
                 
                 Amorphous_f_x = np.array(Amorphous_fitting_data.two_theta)
                 Amorphous_f_y = np.array(Amorphous_fitting_data.intensity)
                 Amorphous_cal_mu = np.array(Amorphous_dec_peaks_data.mu_i)
                 Amorphous_cal_w = np.array(Amorphous_dec_peaks_data.wi)
                 Amorphous_cal_sigma = np.array(Amorphous_dec_peaks_data.sigma2_i)
-
 
                 # peaks of crystalline part
                 peak_intens = []
@@ -265,20 +270,18 @@ class Decomposedpeaks():
                 else:
                     print ('Amorphous: the input peaks are too many!')
 
-
-
-                plt.xlabel('2Theta/(°)', size=10)
-                plt.ylabel('Intensity/(a.u.)', size=10)
+                plt.xlabel('2\u03b8\u00B0')
+                plt.ylabel('I (a.u.)')
                 if Pic_Title == False:
                     pass
                 else:
                     plt.title('Decomposition peak', size=20)
-                plt.plot(o_x, o_y, label="Real intensity")
+                plt.plot(o_x, o_y, label="real intensity")
                 plt.plot(f_x, f_y, label="WPEM fitting profile")
                 for i in range(k):
                     plt.plot(o_x, peak_intens[i],linewidth=2)
 
-                plt.plot( Amorphous_f_x,  Amorphous_f_y, linestyle='--',linewidth=2.5, c='k',label=" Amorphous profile")
+                plt.plot(Amorphous_f_x,  Amorphous_f_y, linestyle='--',linewidth=2.5, c='k',label="Amorphous profile")
                 for i in range(_k):
                     plt.plot(o_x, Amorphous_peak_intens[i],linestyle='--', c='b',linewidth=1.5,)
                 plt.legend()
@@ -299,17 +302,15 @@ class Decomposedpeaks():
                     print(str(RBC), file=wfid)
                 
 
-
-            elif type(self.phace) == int:
-
+            elif type(phase) == int:
                  # fitted amorphous crystalline inten
                 Amorphous_fitting_data = pd.read_csv(r'./DecomposedComponents/Amorphous.csv', header=None,  names=['two_theta', 'intensity'])
-                index4 = np.where((Amorphous_fitting_data.two_theta < self.lowboundary) | (Amorphous_fitting_data.two_theta > self.upboundary))
+                index4 = np.where((Amorphous_fitting_data.two_theta < lowboundary) | (Amorphous_fitting_data.two_theta > upboundary))
                 Amorphous_fitting_data = Amorphous_fitting_data.drop(index4[0])
 
                 # fitted amorphous crystalline peaks
                 Amorphous_dec_peaks_data = pd.read_csv(r'./DecomposedComponents/M_Amorphous_peaks.csv', header=0)
-                index5 = np.where((Amorphous_dec_peaks_data.mu_i < self.lowboundary) | (Amorphous_dec_peaks_data.mu_i > self.upboundary))
+                index5 = np.where((Amorphous_dec_peaks_data.mu_i < lowboundary) | (Amorphous_dec_peaks_data.mu_i > upboundary))
                 Amorphous_dec_peaks_data = Amorphous_dec_peaks_data.drop(index5[0])
 
                 Amorphous_f_x = np.array(Amorphous_fitting_data.two_theta)
@@ -327,11 +328,10 @@ class Decomposedpeaks():
                 else:
                     print ('Amorphous: the input peaks are too many!')
 
-
                 DecomposepeaksIntensity = []
-                for i in range(self.phace):
+                for i in range(phase):
                     dec_peaks_data = pd.read_csv(r'./DecomposedComponents/System{Task}.csv'.format(Task=i), header=0)
-                    index = np.where((dec_peaks_data.mu_i < self.lowboundary) | (dec_peaks_data.mu_i > self.upboundary))
+                    index = np.where((dec_peaks_data.mu_i < lowboundary) | (dec_peaks_data.mu_i > upboundary))
                     dec_peaks_data = dec_peaks_data.drop(index[0])
 
                     o_x = np.array(origianl_data.two_theta)
@@ -341,8 +341,6 @@ class Decomposedpeaks():
                     cal_gamma = np.array(dec_peaks_data.gamma_i)
                     cal_sigma = np.array(dec_peaks_data.sigma_i)
                    
-
-
                     peak_intens = []
                     k = len(cal_mu)
                     if k <= 1000:
@@ -363,15 +361,14 @@ class Decomposedpeaks():
                     MaxP_diffraction_angle = o_x[maxmum_peak_index]
                     MaxP_diffraction_intensity = total_intens[maxmum_peak_index]
 
-
-                    value = np.sin(MaxP_diffraction_angle / 2 * np.pi / 180) / self.wavelength[0]
+                    value = np.sin(MaxP_diffraction_angle / 2 * np.pi / 180) / wavelength[0]
                     MaxP_diffraction_angle = round(MaxP_diffraction_angle,3)
                     MaxP_diffraction_intensity = round(MaxP_diffraction_intensity,3)
                     value = round(value,3)
 
                     if assign == False:
-                        plt.xlabel('2Theta/(°)', size=10)
-                        plt.ylabel('Intensity/(a.u.)', size=10)
+                        plt.xlabel('2\u03b8\u00B0')
+                        plt.ylabel('I (a.u.)')
                         if Pic_Title == False:
                             pass
                         else:
@@ -384,8 +381,8 @@ class Decomposedpeaks():
                         plt.savefig('./DecomposedComponents/Decomposed_peaks{Task}.png'.format(Task=i), dpi=800)
                         plt.show()
                     elif assign == True:
-                        plt.xlabel('2Theta/(°)', size=10)
-                        plt.ylabel('Intensity/(a.u.)', size=10)
+                        plt.xlabel('2\u03b8\u00B0')
+                        plt.ylabel('I (a.u.)')
                         if Pic_Title == False:
                             pass
                         else:
@@ -400,20 +397,20 @@ class Decomposedpeaks():
 
                 if assign == False:
                     area = []   # defined for computing the volume fraction of components by the intensity area
-                    plt.xlabel('2Theta/(°)', size=10)
-                    plt.ylabel('Intensity/(a.u.)', size=10)
+                    plt.xlabel('2\u03b8\u00B0')
+                    plt.ylabel('I (a.u.)')
                     if Pic_Title == False:
                         pass
                     else:
                         plt.title('Decomposited peaks - all components', size=15)
                     plt.plot(o_x, o_y, label="Real intensity")
-                    for l in range(self.phace):
+                    for l in range(phase):
                         plt.plot(o_x, DecomposepeaksIntensity[l],label="Decomposed profile of system  {System}".format(System = l))
                         # calculate the integral area of each component
                         area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))
 
                     # save the 2theta-intensity file of decomposed components
-                    for l in range(self.phace):
+                    for l in range(phase):
                         with open(os.path.join('DecomposedComponents','Profile_Decomposed_system{System}.csv'.format(System = l)), 'w') as wfid:
                             for j in range(len(o_x)):
                                 print(o_x[j], end=', ', file=wfid)
@@ -428,27 +425,27 @@ class Decomposedpeaks():
                     plt.show()
                 elif assign == True:
                     area = []   # defined for computing the volume fraction of components by the intensity area
-                    plt.xlabel('2Theta/(°)', size=10)
-                    plt.ylabel('Intensity/(a.u.)', size=10)
+                    plt.xlabel('2\u03b8\u00B0')
+                    plt.ylabel('I (a.u.)')
                     if Pic_Title == False:
                         pass
                     else:
                         plt.title('Decomposited peaks - all components', size=15)
                     plt.plot(o_x, o_y, label="Real intensity")
-                    for l in range(self.phace):
+                    for l in range(phase):
                         plt.plot(o_x, DecomposepeaksIntensity[l],label=" {System}".format(System = name[l]))
                         # calculate the integral area of each component
                         area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))
 
                     # save the 2theta-intensity file of decomposed components
-                    for l in range(self.phace):
+                    for l in range(phase):
                         with open(os.path.join('DecomposedComponents','{System}.csv'.format(System = name[l])), 'w') as wfid:
                             for j in range(len(o_x)):
                                 print(o_x[j], end=', ', file=wfid)
                                 print(float(DecomposepeaksIntensity[l][j]), file=wfid)
                             
                                 
-                    plt.plot( Amorphous_f_x,  Amorphous_f_y, linestyle='--',linewidth=2.5, c='k',label=" Amorphous profile")
+                    plt.plot( Amorphous_f_x,  Amorphous_f_y, linestyle='--',linewidth=2.5, c='k',label="Amorphous profile")
                     for i in range(_k):
                         plt.plot(Amorphous_f_x, Amorphous_peak_intens[i],linestyle='--', c='b',linewidth=1.5,)
                     plt.legend()    
@@ -478,46 +475,21 @@ class Decomposedpeaks():
                     print(str(RBC), file=wfid)
 
             else:
-                print('Input a error type of ', self.phace)
-     # Normal distribution
+                print('Input a error type of ', phase)
+    
+    # Normal distribution
     def normal_density(self, x, mu, sigma2):
-        """
-        :param x: sample data (2theta)
-        :param mu: mean (μi)
-        :param sigma2: variance (σi^2)
-        :return: Return the probability density of Normal distribution x~N(μi,σi^2)
-        """
-        self.x = x;
-        self.mu = mu;
-        self.sigma2 = sigma2
-        density = (1 / np.sqrt(2 * np.pi * self.sigma2)) * np.exp(-((self.x - self.mu) ** 2) / (2 * self.sigma2))
+        density = (1 / np.sqrt(2 * np.pi * sigma2)) * np.exp(-((x - mu) ** 2) / (2 * sigma2))
         return density
 
     # Lorenz distribution
-    def lorenz_density(self, x, mu=0, gamma=1):
-        """
-        :param x: sample data (2theta)
-        :param mu: mean (μi)
-        :param gamma: FWHM of Lorenz distribution
-        :return: Return the probability density of Lorenz distribution
-        """
-        self.x = x;
-        self.mu = mu;
-        self.gamma = gamma
-
-        density = (1 / np.pi) * (self.gamma / ((self.x - self.mu) ** 2 + self.gamma ** 2))
+    def lorenz_density(self, x, mu, gamma):
+        density = (1 / np.pi) * (gamma / ((x - mu) ** 2 + gamma ** 2))
         return density
-
 
     # To draw the decomposition peak.
     def draw_peak_density(self, x, w_l, w_g, mu, gamma, sigma2):
-        self.x = x
-        self.w_l = w_l
-        self.w_g = w_g
-        self.mu = mu
-        self.gamma = gamma
-        self.sigma2 = sigma2
-        peak_density = self.w_l * self.lorenz_density(self.x, self.mu, self.gamma) + self.w_g * self.normal_density(self.x, self.mu, self.sigma2)
+        peak_density = w_l * self.lorenz_density(x, mu, gamma) + w_g * self.normal_density(x, mu, sigma2)
         return peak_density
 
     def theta_intensity_area(self, theta_data, intensity):

@@ -1,10 +1,34 @@
 from .EMBraggOpt.EMBraggSolver import WPEM
 from .Background.BacDeduct import TwiceFilter
+from .Amorphous.fitting.AmorphousFitting import Amorphous_fitting
+from .Amorphous.QuantitativeCalculation.AmorphousRDF import RadialDistribution
+from .DecomposePlot.plot import Decomposedpeaks
+from .XRDSimulation.Simulation import XRD_profile
+from .Extinction.XRDpre import profile
+# from .Raman.Decompose.RamanFitting import fit
 import datetime
 from time import time
 
+class Initiate(object):
+    """
+    funs:
 
-class Built(object):
+    XRDfit:
+    
+    BackgroundFit:
+
+    FileTypeCovert:
+
+    Amorphous_fit:
+
+    AmorphousRDFun:
+
+    Plot_Components:
+
+    XRDSimulation:
+
+    CIFpreprocess:
+    """
     def XRDfit(self, wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, two_theta_range = None,structure_factor = None, 
             LogPrint=False,bta=0.8, bta_threshold = 0.5,limit=0.0005, iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0.5, s_angle=50, 
             subset_number=9, low_bound=65, up_bound=80, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =1, EXACT = False,Cu_tao = None, Ave_Waves = False,):
@@ -178,11 +202,85 @@ class Built(object):
         :return:
         """
         module = TwiceFilter(Model)
-        module.FFTandSGFilter(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
-                       polyorder=3,  poly_n=6, mode='nearest', bac_var_type='constant')
+        module.FFTandSGFilter(intensity_csv, LFctg, lowAngleRange, bac_num, bac_split, window_length,polyorder,  poly_n, mode, bac_var_type)
         
     def FileTypeCovert(file_name):
         module = TwiceFilter()
         module.convert_file(file_name)
+    
+    def Amorphous_fit(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
+        """
+        :param mix_component : the number of amorphous peaks 
 
- 
+        :param ang_range : default is None
+            two theta range of study
+
+        :param sigma2_coef : default is 0.5
+            sigma2 of gaussian peak
+        
+        :param max_iter : default is 5000
+            the maximum number of iterations of solver
+        
+        : param peak_location : default is None
+            the initial peak position of the amorphous peaks
+            can input as a list, e.g.,
+            peak_location = [20,30,40]
+            the peak position can be frozen by the assigned input,
+            peak_location = [20,30,40,'fixed']
+
+        : param Wavelength : Wavelength of ray, default is 1.54184 (Cu)
+        """
+        Amorphous_fitting(mix_component, ang_range, sigma2_coef, max_iter, peak_location,Wavelength)
+    
+    def AmorphousRDFun(wavelength, r_max = 5,density_zero=None,NAa=None,highlight= 4,value=0.6):
+        module = RadialDistribution(wavelength, r_max)
+        module.RDF(density_zero,NAa,highlight,value)
+    
+    def Plot_Components(lowboundary, upboundary, wavelength,name = None, Macromolecule = False,phase = 1,Pic_Title = False):
+        """
+        :param lowboundary : float, the smallest diffraction angle studied
+
+        :param upboundary : float, the largest diffraction angle studied 
+
+        :param wavelength : list, the wavelength of the X rays
+
+        :param name : list, assign the name of each crystal through this parameter
+
+        :param Macromolecule: whether it contains amorphous, used in amorphous fitting
+
+        :param phase: the number of compounds contained in diffraction signals
+
+        :param Pic_Title: Whether to display the title of the pictures
+        
+        """
+        module = Decomposedpeaks()
+        module.decomposition_peak(lowboundary, upboundary, wavelength,name, Macromolecule ,phase,Pic_Title)
+
+    def XRDSimulation(structure_factor,mu_list,gamma_list, sigma2_list, Mult, HKL_list,  LatticCs, Wavelength=1.54184,two_theta_range=(0, 90,0.02)):
+        """
+        structure_factor ==> [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+        mu_list ==> calculated mui
+        gamma_list ==> calculated gamma
+        sigma2_list ==> calculated sigma2
+        HKL_list ==> [H,K,L] in shape of n*3
+        LatticCs ==> [a,b,c,alpha,beta,gamma]
+        """
+        module = XRD_profile(structure_factor,mu_list,gamma_list, sigma2_list, Mult, HKL_list,  LatticCs, Wavelength)
+        module.Simulate(two_theta_range)
+
+    def CIFpreprocess(filepath = None, wavelength='CuKa',two_theta_range=(10, 90), ):
+        """
+        for a single crystal
+        Computes the XRD pattern and save to csv file
+        Args:
+            filepath (str): file path of the cif file to be calculated
+            two_theta_range ([float of length 2]): Tuple for range of
+                two_thetas to calculate in degrees. Defaults to (0, 90). Set to
+                None if you want all diffracted beams within the limiting
+                sphere of radius 2 / wavelength.
+        return 
+        latt: lattice constants : [a, b, c, al1, al2, al3]
+        structure_factor : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+        """
+        module = profile(wavelength,two_theta_range)
+        module.generate(filepath,)
