@@ -9,28 +9,34 @@ import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor as Gpr
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
-
-# Convert "Free Format(2Theta, step, 2ThetaF)" to "X,Y Data"
-
-
-# # Convert data format
-# file_name = "pbsox.dat"  # The file name of original XRD data (Free Format(2Theta, step, 2ThetaF))
-# convert_file(file_name)
-#
-# # Polynomial fitting of background dots
-# bac_file = "bac_dots.csv"  # The file name of background dots data (2theta-intensity data)
-# original_file = "intensity.csv"  # The file name of raw/original data (2theta-intensity data)
-# poly_n = 6  # or 12, order of polynomial
-# back_poly_fit(bac_file, original_file, poly_n)
-
-
 class TwiceFilter:
+    """
+    background intensity module
+    Smoothing technique Savitzky-Golay filter is applied to improve the signal/noise ratio 
+    after inverse Fourier transform and give a set of slowly varying background points
+    """
     def __init__(self, Model='XRD'):
+        """
+        Display the background curve of XRD diffraction spectrum (Model='XRD')
+        and Raman spectrum (Model='Raman') according to the type
+        """
+        # Define the font of the image
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.size'] = 18 
+
         # Model = 'XRD' or 'Raman'
         self.Model = Model
         os.makedirs('ConvertedDocuments', exist_ok=True)
 
     def convert_file(self, file_name):
+        """
+        Convert "Free Format(2Theta, step, 2ThetaF)" to "X,Y Data"
+
+        This function is defined to convert the XRD diffractometer output file format
+        into a WPEM acceptable input file
+
+        file_name : The file name of original XRD data (Free Format(2Theta, step, 2ThetaF))
+        """
         digital_pattern = re.compile(r'[0-9.]+')
         intensity = []
         with open(file_name, 'r') as xrdfid:
@@ -50,35 +56,55 @@ class TwiceFilter:
                 print(two_theta[i], end=',', file=wfid)
                 print(intensity[i], file=wfid)
 
-    def chunks(self, arr, m):
-        import math
-        arr = arr
-        m = m
-        n = int(math.ceil(len(arr) / float(m)))
-        return [arr[i:i + n] for i in range(0, len(arr), n)]
-
-    def FFTandSGFilter(self, intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, polyorder=3,  poly_n=6,
-                       mode='nearest', bac_var_type='constant'):
+    def FFTandSGFilter(self, intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
+                       polyorder=3,  poly_n=6, mode='nearest', bac_var_type='constant'):
         """
-        :param intensity_csv:
-        :param LFctg:
-        :param lowAngleRange:
-        :param bac_num:
-        :param bac_split:
-        :param window_length:
-        :param polyorder:
-        :param poly_n:
-        :param mode:
-        :param bac_var_type: constant, polynomial,multivariate gaussian
+        :param intensity_csv: the experimental observation
+
+        :param LFctg: low frequency filter Percentage, default  = 0.5
+
+        :param lowAngleRange: low angle (2theta) with obvious background lift phenomenon
+
+        :param bac_num: the number of background points in the background set
+
+        :param bac_split: the background spectrum is divided into several segments
+        
+        :param window_length : int
+            The length of the filter window (i.e., the number of coefficients).
+            `window_length` must be a positive odd integer. If `mode` is 'interp',
+            `window_length` must be less than or equal to the size of `x`.
+        
+        :param polyorder: int
+            The order of the polynomial used to fit the samples.
+            `polyorder` must be less than `window_length`.
+
+        :param poly_n: background mean function fitting polynomial degree
+
+        :param mode:  str, optional
+            Must be 'mirror', 'constant', 'nearest', 'wrap' or 'interp'. This
+            determines the type of extension to use for the padded signal to
+            which the filter is applied.  When `mode` is 'constant', the padding
+            value is given by `cval`.  See the Notes for more details on 'mirror',
+            'constant', 'wrap', and 'nearest'.
+            When the 'interp' mode is selected (the default), no extension
+            is used.  Instead, a degree `polyorder` polynomial is fit to the
+            last `window_length` values of the edges, and this polynomial is
+            used to evaluate the last `window_length // 2` output values.
+            
+        :param bac_var_type: 
+            A pattern describing the background distribution
+            one of constant, polynomial, multivariate gaussia
+
         :return:
         """
         import heapq
         import numpy.fft as nf
         from scipy.signal import savgol_filter
 
-
         angle = intensity_csv.iloc[:, 0]
         signal = intensity_csv.iloc[:, 1]
+        # The complex-valued FFT computes the Fourier transform of signal, 
+        # which represents the decomposition of the signal into its component frequencies.
         complex_array = nf.fft(signal)
         pows = np.abs(complex_array)
 
@@ -175,20 +201,20 @@ class TwiceFilter:
                     print(float(Intensity_mean[j]), file=wfid)
 
 
-            plt.plot(angle, Intensity_mean, color='k', label='Background means')
+            plt.plot(angle, Intensity_mean, color='k', label='background means')
             lowbound = Intensity_mean - standard_deviation
             upbound =  Intensity_mean + standard_deviation
 
             plt.plot(angle, lowbound, 'g--', lw=1)
             plt.plot(angle, upbound, 'g--', lw=1)
             plt.fill_between(angle, lowbound, upbound,
-                             color='lightblue', label=' one sigma \n confidence interval')
-            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='Background Points Set')
+                             color='lightblue', label='one sigma \n confidence interval')
+            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='background points')
             if self.Model == 'Raman':
-                plt.xlabel('Raman shift/(cm-1)')
+                plt.xlabel('Raman shift (cm\u207B\u00B9)')
             else:
-                plt.xlabel('Angle')
-            plt.ylabel('Background Intensity/(a.u.)')
+                plt.xlabel('2\u03b8\u00B0')
+            plt.ylabel('I (a.u.)')
             plt.legend()
             plt.savefig('./ConvertedDocuments/background function distribution_constant.png', dpi=800)
             plt.show()
@@ -219,20 +245,20 @@ class TwiceFilter:
                     print(float(Intensity_mean[j]), file=wfid)
 
 
-            plt.plot(angle, Intensity_mean, color='k', label='Background means')
+            plt.plot(angle, Intensity_mean, color='k', label='background means')
             lowbound = list(map(lambda x: abs(x[0] - x[1]), zip(Intensity_mean, standard_deviation)))
             upbound = list(map(lambda x: abs(x[0] + x[1]), zip(Intensity_mean, standard_deviation)))
 
             plt.plot(angle, lowbound, 'g--', lw=1)
             plt.plot(angle, upbound, 'g--', lw=1)
             plt.fill_between(angle, lowbound, upbound,
-                             color='lightblue', label=' one sigma \n confidence interval')
-            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='Background Points Set')
+                             color='lightblue', label='one sigma \n confidence interval')
+            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='background points')
             if self.Model == 'Raman':
-                plt.xlabel('Raman shift/(cm-1)')
+                plt.xlabel('Raman shift (cm\u207B\u00B9)')
             else:
-                plt.xlabel('Angle')
-            plt.ylabel('Background Intensity/(a.u.)')
+                plt.xlabel('2\u03b8\u00B0')
+            plt.ylabel('I (a.u.)')
             plt.legend()
             plt.savefig('./ConvertedDocuments/background function distribution_polynomial.png', dpi=800)
             plt.show()
@@ -264,16 +290,16 @@ class TwiceFilter:
                     print(float(background_meanfunction[j]), file=wfid)
 
 
-            plt.plot(angle, background_meanfunction,  color='k', label='Background means')
+            plt.plot(angle, background_meanfunction,  color='k', label='background means')
             plt.plot(angle, Intensity_mean - Intensity_dev,  'g--',lw=1)
             plt.plot(angle, Intensity_mean + Intensity_dev, 'g--',lw=1)
-            plt.fill_between(angle, Intensity_mean - Intensity_dev, Intensity_mean + Intensity_dev, color='lightblue', label=' one sigma \n confidence interval')
-            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='Background Points Set')
+            plt.fill_between(angle, Intensity_mean - Intensity_dev, Intensity_mean + Intensity_dev, color='lightblue', label='one sigma \n confidence interval')
+            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='background points')
             if self.Model == 'Raman':
                 plt.xlabel('Raman shift/(cm-1)')
             else:
-                plt.xlabel('Angle')
-            plt.ylabel('Background Intensity/(a.u.)')
+                plt.xlabel('2\u03b8\u00B0')
+            plt.ylabel('I (a.u.)')
             plt.legend()
             plt.savefig('./ConvertedDocuments/background function distribution _ multivariate gaussian.png', dpi=800)
             plt.show()
@@ -293,43 +319,53 @@ class TwiceFilter:
                 print(Twotheta[j], end=', ', file=wfid)
                 print(float(BacSelected[j]), file=wfid)
 
-        plt.plot(angle, signal, color='cyan', label='Original intensity')
+        plt.plot(angle, signal, color='cyan', label='original intensity')
         plt.plot(angle, SG_filter_intensity, color='k', label='FFT-SG intensity')
-        plt.scatter(Twotheta, BacSelected, s=10, c='r', label='Selected background points')
+        plt.scatter(Twotheta, BacSelected, s=10, c='r', label='selected background points')
         if self.Model == 'Raman':
-            plt.xlabel('Raman shift/(cm-1)')
+            plt.xlabel('Raman shift (cm\u207B\u00B9)')
         else:
-            plt.xlabel('Angle')
-        plt.ylabel('Background Intensity/(a.u.)')
+            plt.xlabel('2\u03b8\u00B0')
+        plt.ylabel('I (a.u.)')
         plt.legend(fontsize=13)
         plt.savefig('./ConvertedDocuments/background points.png',dpi=800)
         plt.show()
         plt.clf()
 
-        plt.plot(angle, signal, color='cyan', label='Original intensity')
-        plt.plot(angle, Intensity_mean, color='k', label='Background function')
-        plt.scatter(Twotheta, BacSelected, c='r', label='Background points')
+        plt.plot(angle, signal, color='cyan', label='original intensity')
+        plt.plot(angle, Intensity_mean, color='k', label='background function')
+        plt.scatter(Twotheta, BacSelected, c='r', label='background points')
         if self.Model == 'Raman':
-            plt.xlabel('Raman shift/(cm-1)')
+            plt.xlabel('Raman shift (cm\u207B\u00B9)')
         else:
-            plt.xlabel('Angle')
-        plt.ylabel('Background Intensity/(a.u.)')
+            plt.xlabel('2\u03b8\u00B0')
+        plt.ylabel('I (a.u.)')
         plt.legend(fontsize=13)
         plt.savefig('./ConvertedDocuments/backgroundfittingcurve.png',dpi=800)
         plt.show()
         plt.clf()
         
-        plt.plot(angle, signal, color='cyan', label='Original intensity')
-        plt.plot(angle, inten_no_bac, color='k', label='De_background intensity')
+        plt.plot(angle, signal, color='cyan', label='original intensity')
+        plt.plot(angle, inten_no_bac, color='k', label='de_background intensity')
         if self.Model == 'Raman':
-            plt.xlabel('Raman shift/(cm-1)')
+            plt.xlabel('Raman shift (cm\u207B\u00B9)')
         else:
-            plt.xlabel('Angle')
-        plt.ylabel('Background Intensity/(a.u.)')
+            plt.xlabel('2\u03b8\u00B0')
+        plt.ylabel('I (a.u.)')
         plt.legend(fontsize=13)
         plt.savefig('./ConvertedDocuments/de_backgroundfittingcurve.png',dpi=800)
         plt.show()
         plt.clf()
 
         return standard_deviation
+
+    def chunks(self, arr, m):
+        """
+        Auxiliary function for splitting the array into m segments 
+        """
+        import math
+        arr = arr
+        m = m
+        n = int(math.ceil(len(arr) / float(m)))
+        return [arr[i:i + n] for i in range(0, len(arr), n)]
 
