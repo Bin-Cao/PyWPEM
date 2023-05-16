@@ -1,0 +1,61 @@
+#------------------------------------------------------------------------------
+#$Date: 2017-10-13 02:32:00 +0300 (Fri, 13 Oct 2017) $
+#$Revision: 201954 $
+#$URL: file:///home/coder/svn-repositories/cod/cif/1/00/00/1000058.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/
+#
+# All data on this site have been placed in the public domain by the
+# contributors.
+#
+data_1000058
+_chemical_formula_structural     'Ru O2'
+_chemical_formula_sum            'O2 Ru'
+_chemical_name_systematic        'Ruthenium(IV) oxide'
+_symmetry_cell_setting           tetragonal
+_symmetry_Int_Tables_number      136
+_symmetry_space_group_name_H-M   'P 42/m n m'
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_formula_units_Z            2
+_cell_length_a                   4.4968(2)
+_cell_length_b                   4.4968(2)
+_cell_length_c                   3.1049(1)
+_cell_volume                     62.8
+_cod_database_code               1000058
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_22
+_atom_site_aniso_U_23
+_atom_site_aniso_U_33
+Ru1 0.0039(2) -0.0007(2) 0. 0.0039(2) 0. 0.0044(5)
+O1 0.0063(3) -0.0021(2) 0. 0.0063(3) 0. 0.0070(4)
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_symmetry_multiplicity
+_atom_site_Wyckoff_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_attached_hydrogens
+_atom_site_calc_flag
+Ru1 Ru4+ 2 a 0. 0. 0. 1. 0 d
+O1 O2- 4 f 0.3053(1) 0.3053(1) 0. 1. 0 d
+loop_
+_atom_type_symbol
+_atom_type_oxidation_number
+Ru4+ 4.000
+O2- -2.000
+loop_
+_cod_related_entry_id
+_cod_related_entry_database
+_cod_related_entry_code
+1 ChemSpider 8488619

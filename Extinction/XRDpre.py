@@ -31,7 +31,7 @@ class profile:
             raise TypeError("'wavelength' must be either of: float, int or str")
         self.two_theta_range = two_theta_range
 
-    def generate(self, filepath = None,):
+    def generate(self, filepath ,latt = None, structure_factor = None,):
         """
         for a single crystal
         Computes the XRD pattern and save to csv file
@@ -41,15 +41,21 @@ class profile:
                 two_thetas to calculate in degrees. Defaults to (0, 90). Set to
                 None if you want all diffracted beams within the limiting
                 sphere of radius 2 / wavelength.
+                structure_factor : ['P',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+                latt: lattice constants : [a, b, c, al1, al2, al3]
         return 
         latt: lattice constants : [a, b, c, al1, al2, al3]
         structure_factor : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
         """
-        if filepath == None:
-            pass
+        if type(filepath) != str:
+            print('Need to specify the file (.cif) path to be processed')
         else:
-            latt, _, structure_factor = read_cif(filepath)
-            print('cif file parse completed')
+            try:
+                latt, _, structure_factor = read_cif(filepath)
+                print('cif file parse completed')
+            except:
+                print('cif file parse failed with error')
+                print('Please replace another cif file, or enter manually input lattice constants and  structure factor')
         
         StructureFactor = Bravais_grid(copy.deepcopy(structure_factor))
         system = det_system(latt)
@@ -268,7 +274,7 @@ def Bravais_grid(structure_factor):
                      [-1/2, -1/2,0],
                      [1/2, 0, 1/2],
                      [-1/2, 0, 1/2],[1/2, 0, -1/2],
-                     [-1/2, 0, -1/2]
+                     [-1/2, 0, -1/2],
                      [0, 1/2, 1/2],
                      [0,-1/2, 1/2],[0, 1/2, -1/2],
                      [0, -1/2, -1/2]

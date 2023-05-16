@@ -25,7 +25,7 @@ Please feel free to contact Bin Cao (bcao@shu.edu.cn) in case of any problems/co
 
 Contribution and suggestions are always welcome. You can also contact the authors for research collaboration.
 """
-class WPEM(object):
+class WPEMsolver(object):
     def __init__(
         self,wavelength,Var,asy_C,s_angle,subset_number, low_bound,up_bound,
         lattice_constants,singal,no_bac_intensity_file,original_file,bacground_file,two_theta_range,
@@ -64,7 +64,7 @@ class WPEM(object):
         
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 18 
+        plt.rcParams['font.size'] = 15
         
         # mike dir
         os.makedirs('DecomposedComponents', exist_ok=True)
@@ -132,6 +132,7 @@ class WPEM(object):
             # Calculation of integrated probability of measure function, crystal diffraction pattern
             area = theta_intensity_area(theta_data, inten)
 
+            print('\n')
             # Update parameters via EM-Bragg process
             w_list, p1_list, p2_list, i_ter, flag, \
             ini_CL, mui_abc_set, i_out, bac_up, Rp, Rwp, Rsquare,crystal_sys_set = self.up_parameter(hkl_data,theta_data, inten, area, min_i, i_obser, bac,lmd)
@@ -398,9 +399,9 @@ class WPEM(object):
 
         # Initialize the parameters
         if len(self.wavelength) == 1:
-            ini_w_list, ini_p1_list, ini_p2_list = self.initial_p_single(ini_p, area,)
+            ini_w_list, ini_p1_list, ini_p2_list = self.initial_p_single(ini_p, area,two_theta,intensity)
         elif len(self.wavelength) == 2:
-            ini_w_list, ini_p1_list, ini_p2_list = self.initial_p(ini_p, area,)
+            ini_w_list, ini_p1_list, ini_p2_list = self.initial_p(ini_p, area,two_theta,intensity)
         else:
             print('Your input wavelength number is unsupported in current version of  WPEM')
         print('Parameter initialization has been completed')
@@ -676,7 +677,7 @@ class WPEM(object):
 
         plt.plot([i for i in range(1, len(log_likelihood))], log_likelihood[1:], '-p', color='gray',
                  markersize=10, linewidth=2, markerfacecolor='white',markeredgecolor='gray', markeredgewidth=1,
-                 )
+                 label='log_likelihood')
         plt.xlabel('Iterations', )
         plt.ylabel('Log-likelihood', )
         plt.legend()
@@ -704,7 +705,7 @@ class WPEM(object):
 
     # Initialization parameters for single ray. 
     # Define the initial value of the EM process
-    def initial_p_single(self, rawpeak, i_obs,):
+    def initial_p_single(self, rawpeak, i_obs,two_theta,intensity):
         """
         This is a method for initializing the parameters of a single peak in the EM process.
         When bta>=bta_threshold, the initial values of γi and σi^2 are set according to the original XRD pattern.
@@ -729,8 +730,8 @@ class WPEM(object):
         # store peak indexes
         p = []
         for i in range(k):
-            p.append(p_index(self.two_theta, rawpeak[i]))
-            i_list.append(self.intensity[p[i]])
+            p.append(p_index(two_theta, rawpeak[i]))
+            i_list.append(intensity[p[i]])
             fwhm_list.append(i_list[i] / 2)
             # half intensity of each peak
         i_sum = sum(i_list)
@@ -755,20 +756,20 @@ class WPEM(object):
             for i in range(p[0]):
                 # ref: https://github.com/Bin-Cao/MPhil_SHU/tree/main/thesis_BInCAO table (1.2)
                 # gamma roughly equal to fwhm and sigma2 equal to the gamma2
-                if self.intensity[n - i] <= (self.intensity[p[0]] / 2):
-                    p2_list.append(2 * (self.two_theta[p[0]] - self.two_theta[n - i]) * self.bta) # γi
-                    p2_list.append((2 * (self.two_theta[p[0]] - self.two_theta[n - i]) * (1 - self.bta)) ** 2) # σi^2
+                if intensity[n - i] <= (intensity[p[0]] / 2):
+                    p2_list.append(2 * (two_theta[p[0]] - two_theta[n - i]) * self.bta) # γi
+                    p2_list.append((2 * (two_theta[p[0]] - two_theta[n - i]) * (1 - self.bta)) ** 2) # σi^2
                     break
             # in case not found fwhm from the left side of the peak 
             if len(p2_list) == 0:
-                p2_list.append(2 * (self.two_theta[p[0]] - self.two_theta[0]) * self.bta)
-                p2_list.append((2 * (self.two_theta[p[0]] - self.two_theta[0]) * (1 - self.bta)) ** 2)
+                p2_list.append(2 * (two_theta[p[0]] - two_theta[0]) * self.bta)
+                p2_list.append((2 * (two_theta[p[0]] - two_theta[0]) * (1 - self.bta)) ** 2)
             ### end
 
             # this part is defined for searching fwhm for the middle peak 
             ### star
             for i_l in range(1, k - 1):
-                fwhm_i = self.fwhm_find(p[i_l], p[i_l - 1], fwhm_list[i_l], self.intensity, self.two_theta)
+                fwhm_i = fwhm_find(p[i_l], p[i_l - 1], fwhm_list[i_l], intensity, two_theta)
                 p2_list.append(fwhm_i * self.bta)
                 p2_list.append((fwhm_i * (1 - self.bta)) ** 2)
             ### end
@@ -776,15 +777,15 @@ class WPEM(object):
             # this part is defined for searching fwhm for the last peak 
             ### star
             n = p[-1] + 1
-            for i in range((len(self.two_theta) - p[-1] - 1)):
-                if self.intensity[n + i] <= (self.intensity[p[-1]] / 2):
-                    p2_list.append(2 * (self.two_theta[n + i] - self.two_theta[p[k - 1]]) * self.bta)
-                    p2_list.append((2 * (self.two_theta[n + i] - self.two_theta[p[k - 1]]) * (1 - self.bta)) ** 2)
+            for i in range((len(two_theta) - p[-1] - 1)):
+                if intensity[n + i] <= (intensity[p[-1]] / 2):
+                    p2_list.append(2 * (two_theta[n + i] - two_theta[p[k - 1]]) * self.bta)
+                    p2_list.append((2 * (two_theta[n + i] - two_theta[p[k - 1]]) * (1 - self.bta)) ** 2)
                     break
 
             if len(p2_list) == (k - 1) * 2:
-                p2_list.append(2 * (self.two_theta[-1] - self.two_theta[p[-1]]) * self.bta)
-                p2_list.append((2 * (self.two_theta[-1] - self.two_theta[p[-1]]) * (1 - self.bta)) ** 2)
+                p2_list.append(2 * (two_theta[-1] - two_theta[p[-1]]) * self.bta)
+                p2_list.append((2 * (two_theta[-1] - two_theta[p[-1]]) * (1 - self.bta)) ** 2)
             ### end
 
             # incase extremely unreasonable values
@@ -816,7 +817,7 @@ class WPEM(object):
     # Initialization parameters for mixed rays. 
     # Define the initial value of the EM process
     # see function initial_p_single defined above
-    def initial_p(self, rawpeak, i_obs,):
+    def initial_p(self, rawpeak, i_obs,two_theta,intensity):
         k = len(rawpeak)
         Ai = 0.5
 
@@ -828,8 +829,8 @@ class WPEM(object):
         fwhm_list = []
         p = []
         for i in range(k):
-            p.append(p_index(self.two_theta, rawpeak[i]))
-            i_list.append(self.intensity[p[i]])
+            p.append(p_index(two_theta, rawpeak[i]))
+            i_list.append(intensity[p[i]])
             fwhm_list.append(i_list[i] / 2)
         i_sum = sum(i_list)
         w_list = []
@@ -850,30 +851,30 @@ class WPEM(object):
             # first peak
             n = p[0] - 1
             for i in range(p[0]):
-                if self.intensity[n - i] <= (self.intensity[p[0]] / 2):
-                    p2_list.append(2 * (self.two_theta[p[0]] - self.two_theta[n - i]) * self.bta)
-                    p2_list.append((2 * (self.two_theta[p[0]] - self.two_theta[n - i]) * (1 - self.bta)) ** 2)
+                if intensity[n - i] <= (intensity[p[0]] / 2):
+                    p2_list.append(2 * (two_theta[p[0]] - two_theta[n - i]) * self.bta)
+                    p2_list.append((2 * (two_theta[p[0]] - two_theta[n - i]) * (1 - self.bta)) ** 2)
                     break
             if len(p2_list) == 0:
-                p2_list.append(2 * (self.two_theta[p[0]] - self.two_theta[0]) * self.bta)
-                p2_list.append((2 * (self.two_theta[p[0]] - self.two_theta[0]) * (1 - self.bta)) ** 2)
+                p2_list.append(2 * (two_theta[p[0]] - two_theta[0]) * self.bta)
+                p2_list.append((2 * (two_theta[p[0]] - two_theta[0]) * (1 - self.bta)) ** 2)
 
             # middle peaks
             for i_l in range(1, k - 1):
-                fwhm_i = self.fwhm_find(p[i_l], p[i_l - 1], fwhm_list[i_l], self.intensity, self.two_theta)
+                fwhm_i = fwhm_find(p[i_l], p[i_l - 1], fwhm_list[i_l], intensity, two_theta)
                 p2_list.append(fwhm_i * self.bta)
                 p2_list.append((fwhm_i * (1 - self.bta)) ** 2)
             
             # last peak
             n = p[-1] + 1
-            for i in range((len(self.two_theta) - p[-1] - 1)):
-                if self.intensity[n + i] <= (self.intensity[p[-1]] / 2):
-                    p2_list.append(2 * (self.two_theta[n + i] - self.two_theta[p[k - 1]]) * self.bta)
-                    p2_list.append((2 * (self.two_theta[n + i] - self.two_theta[p[k - 1]]) * (1 - self.bta)) ** 2)
+            for i in range((len(two_theta) - p[-1] - 1)):
+                if intensity[n + i] <= (intensity[p[-1]] / 2):
+                    p2_list.append(2 * (two_theta[n + i] - two_theta[p[k - 1]]) * self.bta)
+                    p2_list.append((2 * (two_theta[n + i] - two_theta[p[k - 1]]) * (1 - self.bta)) ** 2)
                     break
             if len(p2_list) == (k - 1) * 2:
-                p2_list.append(2 * (self.two_theta[-1] - self.two_theta[p[-1]]) * self.bta)
-                p2_list.append((2 * (self.two_theta[-1] - self.two_theta[p[-1]]) * (1 - self.bta)) ** 2)
+                p2_list.append(2 * (two_theta[-1] - two_theta[p[-1]]) * self.bta)
+                p2_list.append((2 * (two_theta[-1] - two_theta[p[-1]]) * (1 - self.bta)) ** 2)
 
             for i in range(k):
                 p2_ln = 2 * i
@@ -885,10 +886,10 @@ class WPEM(object):
             for i_ln in range(k):
                 if i_ln % 2 == 0:
                     i_w = (i_list[i_ln] + i_list[i_ln + 1]) / i_sum
-                    w = self.i_obs * i_w * 2 / 3
+                    w = i_obs * i_w * 2 / 3
                     w_list.append(w * Ai)
                     w_list.append(w * Ai)
-                    w_2 = self.i_obs * i_w / 3
+                    w_2 = i_obs * i_w / 3
                     w_list.append(w_2 * Ai)
                     w_list.append(w_2 * Ai)
 

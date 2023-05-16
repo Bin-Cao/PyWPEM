@@ -20,9 +20,6 @@ class TwiceFilter:
         Display the background curve of XRD diffraction spectrum (Model='XRD')
         and Raman spectrum (Model='Raman') according to the type
         """
-        # Define the font of the image
-        plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 18 
 
         # Model = 'XRD' or 'Raman'
         self.Model = Model
@@ -97,6 +94,10 @@ class TwiceFilter:
 
         :return:
         """
+        # Define the font of the image
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.size'] = 18 
+
         import heapq
         import numpy.fft as nf
         from scipy.signal import savgol_filter
@@ -209,7 +210,7 @@ class TwiceFilter:
             plt.plot(angle, upbound, 'g--', lw=1)
             plt.fill_between(angle, lowbound, upbound,
                              color='lightblue', label='one sigma \n confidence interval')
-            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='background points')
+            plt.scatter(Twotheta, BacSelected, color='r', s=5,zorder=2, label='background points')
             if self.Model == 'Raman':
                 plt.xlabel('Raman shift (cm\u207B\u00B9)')
             else:
@@ -253,7 +254,7 @@ class TwiceFilter:
             plt.plot(angle, upbound, 'g--', lw=1)
             plt.fill_between(angle, lowbound, upbound,
                              color='lightblue', label='one sigma \n confidence interval')
-            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='background points')
+            plt.scatter(Twotheta, BacSelected, color='r', s=5, zorder=2,label='background points')
             if self.Model == 'Raman':
                 plt.xlabel('Raman shift (cm\u207B\u00B9)')
             else:
@@ -294,7 +295,7 @@ class TwiceFilter:
             plt.plot(angle, Intensity_mean - Intensity_dev,  'g--',lw=1)
             plt.plot(angle, Intensity_mean + Intensity_dev, 'g--',lw=1)
             plt.fill_between(angle, Intensity_mean - Intensity_dev, Intensity_mean + Intensity_dev, color='lightblue', label='one sigma \n confidence interval')
-            plt.scatter(Twotheta, BacSelected, color='r', s=5, label='background points')
+            plt.scatter(Twotheta, BacSelected, color='r', s=5, zorder=2,label='background points')
             if self.Model == 'Raman':
                 plt.xlabel('Raman shift/(cm-1)')
             else:
@@ -321,26 +322,26 @@ class TwiceFilter:
 
         plt.plot(angle, signal, color='cyan', label='original intensity')
         plt.plot(angle, SG_filter_intensity, color='k', label='FFT-SG intensity')
-        plt.scatter(Twotheta, BacSelected, s=10, c='r', label='selected background points')
+        plt.scatter(Twotheta, BacSelected, s=5, c='r', zorder=2,label='selected background points')
         if self.Model == 'Raman':
             plt.xlabel('Raman shift (cm\u207B\u00B9)')
         else:
             plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
-        plt.legend(fontsize=13)
+        plt.legend()
         plt.savefig('./ConvertedDocuments/background points.png',dpi=800)
         plt.show()
         plt.clf()
 
         plt.plot(angle, signal, color='cyan', label='original intensity')
         plt.plot(angle, Intensity_mean, color='k', label='background function')
-        plt.scatter(Twotheta, BacSelected, c='r', label='background points')
+        plt.scatter(Twotheta, BacSelected, c='r',zorder=2, label='background points')
         if self.Model == 'Raman':
             plt.xlabel('Raman shift (cm\u207B\u00B9)')
         else:
             plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
-        plt.legend(fontsize=13)
+        plt.legend()
         plt.savefig('./ConvertedDocuments/backgroundfittingcurve.png',dpi=800)
         plt.show()
         plt.clf()
@@ -352,7 +353,7 @@ class TwiceFilter:
         else:
             plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
-        plt.legend(fontsize=13)
+        plt.legend()
         plt.savefig('./ConvertedDocuments/de_backgroundfittingcurve.png',dpi=800)
         plt.show()
         plt.clf()

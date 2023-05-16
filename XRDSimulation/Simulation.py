@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import csv
 import os
 import re
-from ..Extinction.XRDpre import det_system
 from .DiffractionGrometry.atom import atomics
         
 class XRD_profile(object):
@@ -205,7 +204,31 @@ def cal_atoms(ion, angle, wavelength,):
     fi = (loc - floor_) / 0.1 * (up-down) + down 
     return fi
 
-
+def det_system(Lattice_constants):
+    # Lattice_constants is a list
+    ini_a = Lattice_constants[0]
+    ini_b = Lattice_constants[1]
+    ini_c = Lattice_constants[2]
+    ini_la1 = Lattice_constants[3]
+    ini_la2 = Lattice_constants[4]
+    ini_la3 = Lattice_constants[5]
+    crystal_sys = 7
+    if ini_la1 == ini_la2 and ini_la1 == ini_la3:
+        if ini_la1 == 90:
+            if ini_a == ini_b and ini_a == ini_c:
+                crystal_sys = 1
+            elif ini_a == ini_b and ini_a != ini_c:
+                crystal_sys = 3
+            elif ini_a != ini_b and ini_a != ini_c and ini_b != ini_c:
+                crystal_sys = 4
+        elif ini_la1 != 90 and ini_a == ini_b and ini_a == ini_c:
+            crystal_sys = 5
+    elif ini_la1 == ini_la2 and ini_la1 == 90 and ini_la3 == 120 and ini_a == ini_b and ini_a != ini_c:
+        crystal_sys = 2
+    elif ini_la1 == ini_la3 and ini_la1 == 90 and ini_la2 \
+            != 90 and ini_a != ini_b and ini_a != ini_c and ini_c != ini_b:
+        crystal_sys = 6
+    return crystal_sys
 
 
 

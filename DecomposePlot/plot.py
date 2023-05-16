@@ -44,7 +44,7 @@ class Decomposedpeaks():
 
         # Define the font of images
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 18 
+        plt.rcParams['font.size'] = 15 
 
         if Macromolecule == False:
             # if Macromolecule == False, real and fitting profile are total intensity contains bac!
@@ -63,8 +63,8 @@ class Decomposedpeaks():
                 cal_mu = np.array(dec_peaks_data.mu_i)
                 cal_w = np.array(dec_peaks_data.wi)
                 cal_A = np.array(dec_peaks_data.Ai)
-                cal_gamma = np.array(dec_peaks_data.gamma_i)
-                cal_sigma = np.array(dec_peaks_data.sigma_i)
+                cal_gamma = np.array(dec_peaks_data.L_gamma_i)
+                cal_sigma = np.array(dec_peaks_data.G_sigma2_i)
 
                 peak_intens = []
                 k = len(cal_mu)
@@ -101,8 +101,8 @@ class Decomposedpeaks():
                     cal_mu = np.array(dec_peaks_data.mu_i)
                     cal_w = np.array(dec_peaks_data.wi)
                     cal_A = np.array(dec_peaks_data.Ai)
-                    cal_gamma = np.array(dec_peaks_data.gamma_i)
-                    cal_sigma = np.array(dec_peaks_data.sigma_i)
+                    cal_gamma = np.array(dec_peaks_data.L_gamma_i)
+                    cal_sigma = np.array(dec_peaks_data.G_sigma2_i)
                    
                     peak_intens = []
 
@@ -240,8 +240,8 @@ class Decomposedpeaks():
                 cal_mu = np.array(dec_peaks_data.mu_i)
                 cal_w = np.array(dec_peaks_data.wi)
                 cal_A = np.array(dec_peaks_data.Ai)
-                cal_gamma = np.array(dec_peaks_data.gamma_i)
-                cal_sigma = np.array(dec_peaks_data.sigma_i)
+                cal_gamma = np.array(dec_peaks_data.L_gamma_i)
+                cal_sigma = np.array(dec_peaks_data.G_sigma2_i)
                 
                 Amorphous_f_x = np.array(Amorphous_fitting_data.two_theta)
                 Amorphous_f_y = np.array(Amorphous_fitting_data.intensity)
@@ -338,8 +338,8 @@ class Decomposedpeaks():
                     cal_mu = np.array(dec_peaks_data.mu_i)
                     cal_w = np.array(dec_peaks_data.wi)
                     cal_A = np.array(dec_peaks_data.Ai)
-                    cal_gamma = np.array(dec_peaks_data.gamma_i)
-                    cal_sigma = np.array(dec_peaks_data.sigma_i)
+                    cal_gamma = np.array(dec_peaks_data.L_gamma_i)
+                    cal_sigma = np.array(dec_peaks_data.G_sigma2_i)
                    
                     peak_intens = []
                     k = len(cal_mu)
