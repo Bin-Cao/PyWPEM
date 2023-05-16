@@ -58,3 +58,13 @@ PyWPEM/
             RamanFitting.py
 ``` 
 
+## Tables
+
+<h1 align="center">
+  <a href=""><img src="https://github.com/Bin-Cao/PyWPEM/assets/86995074/a04b60fd-f9b2-4b2d-bc1a-c8227d9dc811" alt="WPEM" width="450"></a>
+</h1>
+
+
+<h1 align="center">
+  <a href=""><img src="https://github.com/Bin-Cao/PyWPEM/assets/86995074/4a41f979-ff0c-48d7-8830-d7638811aad2" alt="WPEM" width="450"></a>
+</h1>
