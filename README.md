@@ -10,8 +10,6 @@
 
 🤝🤝🤝 Please star ⭐️ it for promoting open source projects 🌍 ! Thanks !
 
-Source code: [![](https://img.shields.io/badge/PyPI-caobin-blue)](https://pypi.org/project/PyWPEM/)
-
 
 ## Structure / 结构
 
