@@ -10,7 +10,6 @@ import pandas as pd
 import re
 from .pymatgen_cif import CifFile
 from ..EMBraggOpt.BraggLawDerivation import BraggLawDerivation
-from ..XRDSimulation.Simulation import cal_atoms
 
 class profile:
     def __init__(self, wavelength='CuKa',two_theta_range=(10, 90)):
@@ -45,25 +44,26 @@ class profile:
                 latt: lattice constants : [a, b, c, al1, al2, al3]
         return 
         latt: lattice constants : [a, b, c, al1, al2, al3]
-        structure_factor : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+        AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
         """
         if type(filepath) != str:
             print('Need to specify the file (.cif) path to be processed')
         else:
             try:
-                latt, _, structure_factor = read_cif(filepath)
+                latt, space_g, structure_factor = read_cif(filepath)
+                print('the space group of input crystal is :',space_g )
                 print('cif file parse completed')
             except:
                 print('cif file parse failed with error')
                 print('Please replace another cif file, or enter manually input lattice constants and  structure factor')
         
-        StructureFactor = Bravais_grid(copy.deepcopy(structure_factor))
+        AtomCoordinates= UnitCellAtom(copy.deepcopy(structure_factor))
         system = det_system(latt)
-    
+
         grid, d_list = Diffraction_index(system,latt,self.wavelength,self.two_theta_range)
         print('retrieval of all reciprocal vectors satisfying the diffraction geometry is done')
       
-        res_HKL, ex_HKL, d_res_HKL, d_ex_HKL = cal_extinction(structure_factor, latt,grid,d_list,self.wavelength)
+        res_HKL, ex_HKL, d_res_HKL, d_ex_HKL = cal_extinction(structure_factor, grid,d_list,system)
         print('extinction peaks are distinguished')
         print('There are {} extinction peaks'.format(len(d_ex_HKL)) )
 
@@ -85,7 +85,7 @@ class profile:
         ex_peak.to_csv('output_xrd/{}_Extinction_peak.csv'.format(filepath[-11:-4]),index=False)
         print('Diffraction condition judgment end !')
         
-        return latt, StructureFactor
+        return latt, AtomCoordinates
 
 ########################################################################
 def getFloat(s):
@@ -213,36 +213,51 @@ def Diffraction_index(system,latt,cal_wavelength,two_theta_range):
 def translation(ori_loc, tran_path):
     # ori_loc = [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  m atoms
     # tran_path = [[1/2,1/2,1/2],[1/2,1/2,0],.....] t times translations
-    # return the autom locations after translation, len = (t+1)m
+    # return the autom locations after translation, 
     # step_a, step_b, step_c
     ori_atom = copy.deepcopy(ori_loc)
     for serial in range(len(tran_path)):
         step_a, step_b, step_c = tran_path[serial][0],tran_path[serial][1],tran_path[serial][2]
         # traverse all atoms
         for j in range(len(ori_atom)): # j = 0,1,...m
-            atom = []
-            atom.append(ori_atom[j][0])
-            atom.append(ori_atom[j][1]+step_a)
-            atom.append(ori_atom[j][2]+step_b)
-            atom.append(ori_atom[j][3]+step_c)
+            atom_up = []
+            atom_up.append(ori_atom[j][0])
+            atom_up.append(ori_atom[j][1]+step_a)
+            atom_up.append(ori_atom[j][2]+step_b)
+            atom_up.append(ori_atom[j][3]+step_c)
             # add a new location of atom
-            ori_loc.append(atom)
-    return ori_loc
+            ori_loc.append(atom_up)
+            atom_down = []
+            atom_down.append(ori_atom[j][0])
+            atom_down.append(ori_atom[j][1]-step_a)
+            atom_down.append(ori_atom[j][2]-step_b)
+            atom_down.append(ori_atom[j][3]-step_c)
+            # add a new location of atom
+    # Count the atoms in a unit cell
+    unit_cell_atom = []
+    for atom in range(len(ori_atom)): 
+        x_ = ori_atom[atom][1]
+        y_ = ori_atom[atom][2]
+        z_ = ori_atom[atom][3]
+        if 0 <= x_ <=1 and 0 <= y_ <=1 and 0 <= z_ <=1:
+            unit_cell_atom.append(ori_atom[atom])
+        elif 0 <= (x_-1) <=1 and 0 <= (y_-1) <=1 and 0 <= (z_-1) <=1:
+            move_atom = ori_atom[atom]
+            move_atom[1] -= 1
+            move_atom[2] -= 1
+            move_atom[3] -= 1
+            unit_cell_atom.append(move_atom)
+        elif 0 <= (x_+1) <=1 and 0 <= (y_+1) <=1 and 0 <= (z_+1) <=1:
+            move_atom = ori_atom[atom]
+            move_atom[1] += 1
+            move_atom[2] += 1
+            move_atom[3] += 1
+            unit_cell_atom.append(move_atom)
+        else: pass
+    return unit_cell_atom
 
-def det_Bravais(structure_factor):
-    index = []
-    # structure_factor ---> [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] 
-    for j in range(0, len(structure_factor)):
-        if 0 <= structure_factor[j][1] <= 1 and 0 <= structure_factor[j][2] <= 1 and 0 <= structure_factor[j][3] <= 1:
-            pass
-        else:  
-            index.append(j)
-    index.reverse()
-    for i in index:
-        structure_factor.pop(i)
-    return structure_factor
 
-def Bravais_grid(structure_factor):
+def UnitCellAtom(structure_factor):
     """
     Find all atomic positions in the unit cell
     """
@@ -253,32 +268,13 @@ def Bravais_grid(structure_factor):
     if _type == 'P' or _type == 'R':
         res =  structure_factor
     elif _type == 'I': # body center
-        tran_path = [
-                     [1/2, 1/2,1/2],
-                     [-1/2,1/2,1/2],[1/2,-1/2,1/2],[1/2, 1/2,-1/2],
-                     [-1/2,-1/2,1/2],[-1/2, 1/2,-1/2],[1/2, -1/2,-1/2],
-                     [-1/2,-1/2,-1/2]
-                     ]
+        tran_path = [[1/2,1/2,1/2],]
         res = translation(structure_factor,tran_path)
     elif _type == 'C': # bottom center
-        tran_path = [
-                     [1/2, 1/2,0],
-                     [-1/2, 1/2,0],[1/2, -1/2,0],
-                     [-1/2,-1/2,0]
-                     ]
+        tran_path = [[1/2, 1/2,0],]
         res = translation(structure_factor,tran_path)
     elif _type == 'F': # face center
-        tran_path = [
-                     [1/2, 1/2,0],
-                     [-1/2, 1/2,0],[1/2, -1/2,0],
-                     [-1/2, -1/2,0],
-                     [1/2, 0, 1/2],
-                     [-1/2, 0, 1/2],[1/2, 0, -1/2],
-                     [-1/2, 0, -1/2],
-                     [0, 1/2, 1/2],
-                     [0,-1/2, 1/2],[0, 1/2, -1/2],
-                     [0, -1/2, -1/2]
-                     ]
+        tran_path = [[1/2, 1/2,0],[1/2, 0, 1/2],[0, 1/2, 1/2]]
         # delete atoms outside the unit cell
         res = translation(structure_factor,tran_path)
     else:  
@@ -292,35 +288,23 @@ def Bravais_grid(structure_factor):
 
 # def fun for calculating extinction
 # del the peak extincted
-def cal_extinction(structure_factor, latt,HKL_list,dis_list,wavelength):
-    system = det_system(latt)
+def cal_extinction(structure_factor,HKL_list,dis_list,system):
     HKL_list = np.array(HKL_list).tolist()
-    # structure_factor ---> ['P',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
-    uni_atom_loc = Bravais_grid(structure_factor)
-    # uni_atom_loc ---> [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] after transformation
+
+    # Diffraction crystal plat
     res_HKL = []
+    # interplanar spacing
     d_res_HKL = []
 
+    # extinction crystal plat
     ex_HKL = []
+    # interplanar spacing
     d_ex_HKL = []
-    
+
+    _type = structure_factor[0]
     for angle in range(len(HKL_list)):
-        FHKL_square_left = 0
-        FHKL_square_right = 0
-        for atom in range(len(uni_atom_loc)):
-            d_f = BraggLawDerivation().d_spcing(system)
-            sym_h, sym_k, sym_l, sym_a, sym_b, sym_c, angle1, angle2, angle3 = symbols('sym_h sym_k sym_l sym_a sym_b sym_c angle1 angle2 angle3')
-            plane_d = float(d_f.subs({sym_h: HKL_list[angle][0], sym_k: HKL_list[angle][1], sym_l: HKL_list[angle][2], sym_a: latt[0], sym_b: latt[1],
-                            sym_c: latt[2], angle1: latt[3]*np.pi/180, angle2: latt[4]*np.pi/180, angle3:latt[5]*np.pi/180}))
-            mu = 2 * np.arcsin(wavelength /2/plane_d) * 180 / np.pi
-            fi = cal_atoms(uni_atom_loc[atom][0], mu, wavelength)
-    
-            FHKL_square_left +=  fi * np.cos(2 * np.pi * (uni_atom_loc[atom][1] * HKL_list[angle][0] +
-                                                uni_atom_loc[atom][2] * HKL_list[angle][1] + uni_atom_loc[atom][3] * HKL_list[angle][2]))
-            FHKL_square_right += fi * np.sin(2 * np.pi * (uni_atom_loc[atom][1] * HKL_list[angle][0] +
-                                                uni_atom_loc[atom][2] * HKL_list[angle][1] + uni_atom_loc[atom][3] * HKL_list[angle][2]))
-        FHKL_square = FHKL_square_left ** 2 + FHKL_square_right ** 2
-        if FHKL_square <= 1e-5:
+        extinction = lattice_extinction(_type,HKL_list[angle],system)
+        if extinction == True:
             ex_HKL.append(HKL_list[angle])
             d_ex_HKL.append(dis_list[angle])
         else:
@@ -328,6 +312,30 @@ def cal_extinction(structure_factor, latt,HKL_list,dis_list,wavelength):
             d_res_HKL.append(dis_list[angle])
    
     return res_HKL, ex_HKL, d_res_HKL, d_ex_HKL
+
+def lattice_extinction(lattice_type,HKL,system):
+    extinction = False
+    # symmetry structures
+    if lattice_type == 'P' or lattice_type == 'R':
+        pass
+    elif lattice_type == 'I': # body center
+        if (HKL[0]+HKL[1]+HKL[2]) % 2 == 1:
+            extinction = True
+        else: pass
+    elif lattice_type == 'C': # bottom center
+        if system == 1 or system == 5: 
+            if ((HKL[0]+HKL[1]) % 2 == 1) or ((HKL[1]+HKL[2]) % 2 == 1) or ((HKL[0]+HKL[2]) % 2 == 1): 
+                extinction = True
+            else: pass
+        else:
+            if (HKL[0]+HKL[1]) % 2 == 1: 
+                extinction = True
+            else: pass
+    elif lattice_type == 'F': # face center
+        if (HKL[0] % 2 == 1 and HKL[1] % 2 == 1 and HKL[2] % 2 == 1) or (HKL[0] % 2 == 0 and HKL[1] % 2 == 0 and HKL[2] % 2 == 0):
+            pass
+        else: extinction = True
+    return extinction
 
 def mult_rule(H, K,L,system):
     """

@@ -1,54 +1,77 @@
-# XRD simulation
+# XRD simulation for a sigle crystal 
 # Author: Bin CAO <binjacobcao@gmail.com>
 
 from sympy import *
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import csv
 import os
 import re
+from ..Extinction.XRDpre import profile
 from .DiffractionGrometry.atom import atomics
         
 class XRD_profile(object):
-    def __init__(self,structure_factor,mu_list,gamma_list, sigma2_list, Mult, HKL_list,  LatticCs, Wavelength=1.54184):
+    def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakWidth=False, CSWPEMout = None):
+        # filepath : the path of the cif file
+        # CSWPEMout : Crystal System WPEMout file
+        # PeakWidth=False, The peak width of the simulated peak is 0
+        # PeakWidth=True, The peak width of the simulated peak is set to the peak obtained by WPEM
+        # read parameters from cif by ..Extinction.XRDpre
+        _range = (two_theta_range[0],two_theta_range[1])
+        LatticCs, Atom_coordinate = profile(wavelength,_range).generate(filepath)
+        print('\n')
+        self.LatticCs = LatticCs
+        self.two_theta_range = two_theta_range 
         self.crystal_system = det_system(LatticCs)
-        self.structure_factor = structure_factor #  ==> [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
-        # len(Theta_list) = len(Mult) = len(HKL_list)
-        self.mu_list = mu_list # ==> calculated mui
-        self.gamma_list = gamma_list # ==> calculated gamma
-        self.sigma2_list = sigma2_list # ==> calculated sigma2
-        self.Mult = Mult
-        self.HKL_list = HKL_list # [H,K,L] in shape of n*3
-        self.LatticCs = LatticCs # [a,b,c,alpha,beta,gamma]
-        self.wavelength = Wavelength
-        """
-        atomic_dif = pd.read_csv('./Atom_f.csv',index_col=0)
-        self.atomic_dif = atomic_dif.to_dict('index')
-        print(self.atomic_dif)
-        """
+        self.Atom_coordinate = Atom_coordinate   
+        #  i.e., [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] 
+
+        if isinstance(wavelength, (float, int)):
+            self.wavelength = wavelength
+        elif isinstance(wavelength, str):
+            self.radiation = wavelength
+            self.wavelength = WAVELENGTHS[wavelength]
+        else:
+            raise TypeError("'wavelength' must be either of: float, int or str")
+        
+        # generate delta function
+        if PeakWidth==False:
+            peak = pd.read_csv('./output_xrd/{}HKL.csv'.format(filepath[-11:-4]))
+            self.mu_list = peak['2theta/TOF'].tolist()
+            self.Mult = peak['Mult'].tolist()
+            self.HKL_list = np.array(peak[['H','K','L']]).tolist()
+            print('Initilized witout peak\'s shape')
+        elif PeakWidth==True:
+            if type(CSWPEMout) != str:
+                print('Please provide the decomposed peak parameters of WPEM')
+            else:
+                peak = pd.read_csv('./output_xrd/{}HKL.csv'.format(filepath[-11:-4]))
+                data = pd.read_csv(CSWPEMout)
+                self.mu_list = data['mu_i'].tolist() 
+                self.gamma_list = data['L_gamma_i'].tolist() 
+                self.sigma2_list = data['G_sigma2_i'].tolist()
+                self.Mult = peak['Mult'].tolist()
+                self.HKL_list = np.array(peak[['H','K','L']]).tolist()
+                print('Initilized with peak\'s shape')
+        self.PeakWidth = PeakWidth
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 18 
-    
+        plt.rcParams['font.size'] = 15
         os.makedirs('Simulation_WPEM', exist_ok=True)
 
-    def Simulate(self, two_theta_range=(0, 90,0.02)):
-        """
-        two_theta_range : The range of the generated simulation pattern
-        """
+    def Simulate(self,):
         FHKL_square = [] # [FHKL2_1, FHKL2_2,...] a list has the same length with HKL_list
-        
         for angle in range(len(self.HKL_list)):
             FHKL_square_left = 0
             FHKL_square_right = 0
-            for atom in range(len(self.structure_factor)):
-                fi = cal_atoms(self.structure_factor[atom][0],self.mu_list[angle], self.wavelength)
-                FHKL_square_left += fi * np.cos(2 * np.pi * (self.structure_factor[atom][1] * self.HKL_list[angle][0] +
-                                                    self.structure_factor[atom][2] * self.HKL_list[angle][1] + self.structure_factor[atom][3] * self.HKL_list[angle][2]))
-                FHKL_square_right += fi * np.sin(2 * np.pi * (self.structure_factor[atom][1] * self.HKL_list[angle][0] +
-                                                    self.structure_factor[atom][2] * self.HKL_list[angle][1] + self.structure_factor[atom][3] * self.HKL_list[angle][2]))
+            for atom in range(len(self.Atom_coordinate)):
+                fi = cal_atoms(self.Atom_coordinate[atom][0],self.mu_list[angle], self.wavelength)
+                FHKL_square_left += fi * np.cos(2 * np.pi * (self.Atom_coordinate[atom][1] * self.HKL_list[angle][0] +
+                                                    self.Atom_coordinate[atom][2] * self.HKL_list[angle][1] + self.Atom_coordinate[atom][3] * self.HKL_list[angle][2]))
+                FHKL_square_right += fi * np.sin(2 * np.pi * (self.Atom_coordinate[atom][1] * self.HKL_list[angle][0] +
+                                                    self.Atom_coordinate[atom][2] * self.HKL_list[angle][1] + self.Atom_coordinate[atom][3] * self.HKL_list[angle][2]))
             FHKL_square.append(FHKL_square_left ** 2 + FHKL_square_right ** 2)
-
 
         # cal unit cell volume
         VolumeFunction = self.LatticVolume()
@@ -63,13 +86,16 @@ class XRD_profile(object):
         for angle in range(len(FHKL_square)):
             Ints.append(float(FHKL_square[angle] * self.Mult[angle] / Volume ** 2
                         * (1 + np.cos(self.mu_list[angle] * np.pi/180) ** 2) / (np.sin(self.mu_list[angle] / 2 * np.pi/180) **2 * np.cos(self.mu_list[angle] / 2 * np.pi/180))))
-
-        x_sim = np.arange(two_theta_range[0],two_theta_range[1],two_theta_range[2])
-
-        y_sim = 0
-        for num in range(len(Ints)):
-            _ = draw_peak_density(x_sim, Ints[num], self.mu_list[num], self.gamma_list[num], self.sigma2_list[num])
-            y_sim += _
+        
+        if self.PeakWidth == True:
+            x_sim = np.arange(self.two_theta_range[0],self.two_theta_range[1],self.two_theta_range[2])
+            y_sim = 0
+            for num in range(len(Ints)):
+                _ = draw_peak_density(x_sim, Ints[num], self.mu_list[num], self.gamma_list[num], self.sigma2_list[num])
+                y_sim += _
+        elif self.PeakWidth == False:
+            _x_sim = np.arange(self.two_theta_range[0],self.two_theta_range[1],self.two_theta_range[2])
+            x_sim,y_sim = cal_delta_peak(self.mu_list,Ints,_x_sim)
 
         # save simulation results
         plt.plot(x_sim, y_sim, '-g', label= "Simulated  Profile (crystal)", )
@@ -230,6 +256,47 @@ def det_system(Lattice_constants):
         crystal_sys = 6
     return crystal_sys
 
+def cal_delta_peak(mu_list,Ints_list,_x_sim):
+    # find peak's location
+    nearest_indices = []
+    for num in mu_list:
+        nearest_index = np.abs(_x_sim - num).argmin()
+        nearest_indices.append(nearest_index)
+
+    # cal intensity
+    peak_inten = np.zeros_like(_x_sim)
+    for i, index in enumerate(nearest_indices):
+        peak_inten[index] = Ints_list[i]
+    return _x_sim,peak_inten
+
+
+# XRD wavelengths in angstroms
+WAVELENGTHS = {
+    "CuKa": 1.54184,
+    "CuKa2": 1.544414,
+    "CuKa1": 1.540593,
+    "CuKb1": 1.39222,
+    "MoKa": 0.71073,
+    "MoKa2": 0.71359,
+    "MoKa1": 0.70930,
+    "MoKb1": 0.63229,
+    "CrKa": 2.29100,
+    "CrKa2": 2.29361,
+    "CrKa1": 2.28970,
+    "CrKb1": 2.08487,
+    "FeKa": 1.93735,
+    "FeKa2": 1.93998,
+    "FeKa1": 1.93604,
+    "FeKb1": 1.75661,
+    "CoKa": 1.79026,
+    "CoKa2": 1.79285,
+    "CoKa1": 1.78896,
+    "CoKb1": 1.63079,
+    "AgKa": 0.560885,
+    "AgKa2": 0.563813,
+    "AgKa1": 0.559421,
+    "AgKb1": 0.497082,
+}
 
 
 

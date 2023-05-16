@@ -18,7 +18,7 @@ CIFpreprocess:
         :param filepath (str): File path of the CIF file to be calculated.
     output:
         latt (list): Lattice constants [a, b, c, al1, al2, al3].
-        structure_factor (list): Structure factors [['Cu2+', 0, 0, 0], ['O-2', 0.5, 1, 1], ...].
+        AtomCoordinates (list): Structure factors [['Cu2+', 0, 0, 0], ['O-2', 0.5, 1, 1], ...].
 
 BackgroundFit:
     Strips the noise from the diffraction pattern.
@@ -63,9 +63,12 @@ Plot_Components:
         result_folder : the results.
 
 XRDSimulation:
-    
+    XRDSimulation
+    input:
+        :param filepath (str): file path of the cif file to be calculated
+    output:
+        files
 """
-
 
 from .EMBraggOpt.EMBraggSolver import WPEMsolver
 from .Background.BacDeduct import TwiceFilter
@@ -77,9 +80,8 @@ from .Extinction.XRDpre import profile
 # from .Raman.Decompose.RamanFitting import fit
 import datetime
 from time import time
-
-
 import datetime
+
 now = datetime.datetime.now()
 formatted_date_time = now.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -89,59 +91,34 @@ print('URL : https://github.com/Bin-Cao/WPEM')
 print('Executed on :',formatted_date_time, ' Have a great day.')
 print('\n')
 
-
 def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, two_theta_range = None,structure_factor = None, 
         bta=0.8, bta_threshold = 0.5,limit=0.0005, iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0.5, s_angle=50, 
-        subset_number=9, low_bound=65, up_bound=80, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =1, EXACT = False,Cu_tao = None, Ave_Waves = False,):
+        subset_number=9, low_bound=65, up_bound=80, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =3, EXACT = False,Cu_tao = None, Ave_Waves = False,):
     """
-    PACKAGE: Whole Pattern fitting of powder X-ray diffraction by Expectation Maximum (WPEM) algorithm
-
-    More information about WPEM algorithm, e.g., source code, user manual,  examples etc., are provided at the open-source, dynamic-update library of WPEM package: [github.com/Bin-Cao/WpenPattern]. Welcome to participate in the community building of WpenPattern package, and provide your code and suggestions. 
-
     :param wavelength: list type, The wavelength of diffraction waves
-
     :param Var: a constant or a array, Statistical variance of background 
-
     :param Lattice_constants: 2-dimensional list, initial value of Lattice_constants
-
     :param no_bac_intensity_file: csv document, Diffraction intensity file with out bacground intensity
-
     :param original_file: csv document, Diffraction intensity file
-
     :param bacground_file: csv document, The fitted background intensity 
-
     :param two_theta_range: The studied range of diffraction angels 
-
-    :param structure_factor: list, if EXACT = True, the structure factor is used calculating the volume fraction of mixed components
-
+    :param structure_factor: list, if EXACT = True, the structure factor is used calculating
+            the volume fraction of mixed components
     :param bta: float default = 0.8, the ratio of Lorentzian components in PV function
-
     :param bta_threshold: float default = 0.5, a preset lower boundary of bta
-
     :param limit: float default = 0.0005, a preset lower boundary of sigma2
-
     :param iter_limit: float default = 0.05, a preset threshold iteration promotio (likelihood) 
-
     :param w_limit: float default = 1e-17,  a preset lower boundary of peak weight
-
     :param iter_max: int default = 40, maximum number of iterations
-
     :param lock_num: int default = 3,  restriction  of loglikelihood iterations continously decrease    
-
     :param asy_C, s_angle: Peak Correction Parameters
-
-    :param subset_number (default = 9), low_bound (default = 65), up_bound (default = 80): subset_number peaks between low_bound and up_bound are used to calculate the new lattice constants by bragg law
-
+    :param subset_number (default = 9), low_bound (default = 65), up_bound (default = 80): subset_number peaks
+            between low_bound and up_bound are used to calculate the new lattice constants by bragg law
     :param MODEL: str default = 'REFINEMENT' for lattice constants REFINEMENT; 'ANALYSIS' for components ANALYSIS
-
     :param Macromolecule : Boolean default = False, for profile fitting of crystals. True for macromolecules
-
     :param cpu : int default = 4, the number of processors
-
-    :param num : int default = 1, the number of the strongest peaks used in calculating volume fraction
-
+    :param num : int default = 3, the number of the strongest peaks used in calculating volume fraction
     :param EXACT : Boolean default = False, True for exact calculation of volume fraction by diffraction intensity theory
-    
     :return: An instantiated model
     """
     
@@ -215,26 +192,18 @@ def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, 
                     polyorder=3, poly_n=6, mode='nearest', bac_var_type='constant', Model='XRD'):
     """
     :param intensity_csv: the experimental observation
-
     :param LFctg: low frequency filter Percentage, default  = 0.5
-
     :param lowAngleRange: low angle (2theta) with obvious background lift phenomenon
-
     :param bac_num: the number of background points in the background set
-
     :param bac_split: the background spectrum is divided into several segments
-    
     :param window_length : int
         The length of the filter window (i.e., the number of coefficients).
         `window_length` must be a positive odd integer. If `mode` is 'interp',
         `window_length` must be less than or equal to the size of `x`.
-    
     :param polyorder: int
         The order of the polynomial used to fit the samples.
         `polyorder` must be less than `window_length`.
-
     :param poly_n: background mean function fitting polynomial degree
-
     :param mode:  str, optional
         Must be 'mirror', 'constant', 'nearest', 'wrap' or 'interp'. This
         determines the type of extension to use for the padded signal to
@@ -245,15 +214,12 @@ def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, 
         is used.  Instead, a degree `polyorder` polynomial is fit to the
         last `window_length` values of the edges, and this polynomial is
         used to evaluate the last `window_length // 2` output values.
-
     :param bac_var_type: 
         A pattern describing the background distribution
         one of constant, polynomial, multivariate gaussia
-
     :param  Model:
         Display the background curve of XRD diffraction spectrum (Model='XRD')
         and Raman spectrum (Model='Raman') according to the type
-
     :return:
         std of the background distribution
     """
@@ -267,23 +233,18 @@ def FileTypeCovert(file_name):
 def Amorphous_fit(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
     """
     :param mix_component : the number of amorphous peaks 
-
     :param ang_range : default is None
-        two theta range of study
-
+        two theta range of study, e.g., ang_range = (20,80)
     :param sigma2_coef : default is 0.5
         sigma2 of gaussian peak
-    
     :param max_iter : default is 5000
         the maximum number of iterations of solver
-    
     : param peak_location : default is None
         the initial peak position of the amorphous peaks
         can input as a list, e.g.,
         peak_location = [20,30,40]
         the peak position can be frozen by the assigned input,
         peak_location = [20,30,40,'fixed']
-
     : param Wavelength : Wavelength of ray, default is 1.54184 (Cu)
     """
     Amorphous_fitting(mix_component, ang_range, sigma2_coef, max_iter, peak_location,Wavelength)
@@ -295,36 +256,31 @@ def AmorphousRDFun(wavelength, r_max = 5,density_zero=None,NAa=None,highlight= 4
 def Plot_Components(lowboundary, upboundary, wavelength,name = None, Macromolecule = False,phase = 1,Pic_Title = False):
     """
     :param lowboundary : float, the smallest diffraction angle studied
-
     :param upboundary : float, the largest diffraction angle studied 
-
     :param wavelength : list, the wavelength of the X rays
-
     :param name : list, assign the name of each crystal through this parameter
-
     :param Macromolecule: whether it contains amorphous, used in amorphous fitting
-
     :param phase: the number of compounds contained in diffraction signals
-
-    :param Pic_Title: Whether to display the title of the pictures
-    
+    :param Pic_Title: Whether to display the title of the pictures, some title is very long
     """
     module = Decomposedpeaks()
     module.decomposition_peak(lowboundary, upboundary, wavelength,name, Macromolecule ,phase,Pic_Title)
 
-def XRDSimulation(structure_factor,mu_list,gamma_list, sigma2_list, Mult, HKL_list,  LatticCs, Wavelength=1.54184,two_theta_range=(0, 90,0.02)):
+def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakWidth=False, CSWPEMout = None):
     """
-    structure_factor ==> [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
-    mu_list ==> calculated mui
-    gamma_list ==> calculated gamma
-    sigma2_list ==> calculated sigma2
-    HKL_list ==> [H,K,L] in shape of n*3
-    LatticCs ==> [a,b,c,alpha,beta,gamma]
+    :param filepath (str): file path of the cif file to be calculated
+    :param two_theta_range ([float of length 2]): Tuple for range of
+        two_thetas to calculate in degrees. Defaults to (0, 90). Set to
+        None if you want all diffracted beams within the limiting
+        sphere of radius 2 / wavelength.
+    :param PeakWidth
+        PeakWidth=False, The peak width of the simulated peak is 0
+        PeakWidth=True, The peak width of the simulated peak is set to the peak obtained by WPEM
+    :param CSWPEMout : location of corresponding Crystal System WPEMout file
     """
-    XRD_profile(structure_factor,mu_list,gamma_list, sigma2_list, Mult, HKL_list,  LatticCs, Wavelength).Simulate(two_theta_range)
+    XRD_profile(filepath,wavelength,two_theta_range,PeakWidth, CSWPEMout).Simulate()
     
-
-def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, structure_factor = None):
+def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None):
     """
     for a single crystal
     Computes the XRD pattern and save to csv file
@@ -334,8 +290,11 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
             two_thetas to calculate in degrees. Defaults to (0, 90). Set to
             None if you want all diffracted beams within the limiting
             sphere of radius 2 / wavelength.
+        latt and AtomCoordinates # ['P',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+        This interface is to prevent non-standard cif files from failing to read-in structures,
+        through manual reading and manual input method definition
     return 
     latt: lattice constants : [a, b, c, al1, al2, al3]
-    structure_factor : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+    AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
     """
-    profile(wavelength,two_theta_range).generate(filepath,latt,structure_factor)
+    profile(wavelength,two_theta_range).generate(filepath,latt,AtomCoordinates)
