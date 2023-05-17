@@ -291,7 +291,7 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
             two_thetas to calculate in degrees. Defaults to (0, 90). Set to
             None if you want all diffracted beams within the limiting
             sphere of radius 2 / wavelength.
-        latt and AtomCoordinates # ['P',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+        latt and AtomCoordinates # ['22',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  # '22' is the space group code
         This interface is to prevent non-standard cif files from failing to read-in structures,
         through manual reading and manual input method definition
     return 

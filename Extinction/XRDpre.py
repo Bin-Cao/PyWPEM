@@ -8,6 +8,7 @@ import copy
 import numpy as np
 import pandas as pd
 import re
+from .wyckoff import wyckoff_dict
 from .pymatgen_cif import CifFile
 from ..EMBraggOpt.BraggLawDerivation import BraggLawDerivation
 
@@ -30,7 +31,7 @@ class profile:
             raise TypeError("'wavelength' must be either of: float, int or str")
         self.two_theta_range = two_theta_range
 
-    def generate(self, filepath ,latt = None, structure_factor = None,):
+    def generate(self, filepath ,latt = None, Asymmetric_atomic_coordinates = None,):
         """
         for a single crystal
         Computes the XRD pattern and save to csv file
@@ -40,7 +41,7 @@ class profile:
                 two_thetas to calculate in degrees. Defaults to (0, 90). Set to
                 None if you want all diffracted beams within the limiting
                 sphere of radius 2 / wavelength.
-                structure_factor : ['P',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+                Asymmetric_atomic_coordinates : ['22',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
                 latt: lattice constants : [a, b, c, al1, al2, al3]
         return 
         latt: lattice constants : [a, b, c, al1, al2, al3]
@@ -50,20 +51,20 @@ class profile:
             print('Need to specify the file (.cif) path to be processed')
         else:
             try:
-                latt, space_g, structure_factor = read_cif(filepath)
+                latt, space_g, Asymmetric_atomic_coordinates,Point_group= read_cif(filepath)
                 print('the space group of input crystal is :',space_g )
                 print('cif file parse completed')
             except:
                 print('cif file parse failed with error')
                 print('Please replace another cif file, or enter manually input lattice constants and  structure factor')
         
-        AtomCoordinates= UnitCellAtom(copy.deepcopy(structure_factor))
+        AtomCoordinates= UnitCellAtom(copy.deepcopy(Asymmetric_atomic_coordinates))
         system = det_system(latt)
 
         grid, d_list = Diffraction_index(system,latt,self.wavelength,self.two_theta_range)
         print('retrieval of all reciprocal vectors satisfying the diffraction geometry is done')
       
-        res_HKL, ex_HKL, d_res_HKL, d_ex_HKL = cal_extinction(structure_factor, grid,d_list,system)
+        res_HKL, ex_HKL, d_res_HKL, d_ex_HKL = cal_extinction(Point_group, grid,d_list,system)
         print('extinction peaks are distinguished')
         print('There are {} extinction peaks'.format(len(d_ex_HKL)) )
 
@@ -102,6 +103,7 @@ def read_cif(cif_dir):
         alpha = getFloat(v['_cell_angle_alpha'])
         beta = getFloat(v['_cell_angle_beta'])
         gamma = getFloat(v['_cell_angle_gamma'])
+        space_group_code = str(v['_symmetry_Int_Tables_number'])
         latt = [a, b, c, alpha, beta, gamma]
 
         if '_symmetry_space_group_name_Hall' in v:
@@ -113,10 +115,10 @@ def read_cif(cif_dir):
         else:
             raise Exception('symmetry_space_group_name not found in {}'.format(cif_dir))
         
-        sites = [symbol]
-        for i, s in enumerate(v['_atom_site_type_symbol']):
-            sites.append([s, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
-    return latt, spaceG, sites
+        sites = [space_group_code]
+        for i, name in enumerate(v['_atom_site_type_symbol']):
+            sites.append([name, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
+    return latt, spaceG, sites,symbol
 ########################################################################
 
 def get_float(f_str, n):
@@ -212,29 +214,11 @@ def Diffraction_index(system,latt,cal_wavelength,two_theta_range):
     res_HKL, res_d = de_redundant(grid, d_list)
     return res_HKL, res_d
 
-def translation(ori_loc, tran_path):
-    # ori_loc = [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  m atoms
-    # tran_path = [[1/2,1/2,1/2],[1/2,1/2,0],.....] t times translations
-    # return the autom locations after translation, 
-    # step_a, step_b, step_c
-    ori_atom = copy.deepcopy(ori_loc)
-    for serial in range(len(tran_path)):
-        step_a, step_b, step_c = tran_path[serial][0],tran_path[serial][1],tran_path[serial][2]
-        # traverse all atoms
-        for j in range(len(ori_atom)): # j = 0,1,...m
-            atom_up = []
-            atom_up.append(ori_atom[j][0])
-            atom_up.append(ori_atom[j][1]+step_a)
-            atom_up.append(ori_atom[j][2]+step_b)
-            atom_up.append(ori_atom[j][3]+step_c)
-            # add a new location of atom
-            ori_loc.append(atom_up)
-            atom_down = []
-            atom_down.append(ori_atom[j][0])
-            atom_down.append(ori_atom[j][1]-step_a)
-            atom_down.append(ori_atom[j][2]-step_b)
-            atom_down.append(ori_atom[j][3]-step_c)
-            # add a new location of atom
+def unit_cell_range(ori_atom):
+    """
+    Atoms within a unit cell are retained
+    """
+    # ori_loc = [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  Atoms after symmetry operations
     # Count the atoms in a unit cell
     unit_cell_atom = []
     for atom in range(len(ori_atom)): 
@@ -256,41 +240,29 @@ def translation(ori_loc, tran_path):
             move_atom[3] += 1
             unit_cell_atom.append(move_atom)
         else: pass
-    return unit_cell_atom
+    
+    unique_data = []
+    for item in unit_cell_atom:
+        if item not in unique_data:
+            unique_data.append(item)
+    return unique_data
 
 
-def UnitCellAtom(structure_factor):
+def UnitCellAtom(Asymmetric_atomic_coordinates):
     """
     Find all atomic positions in the unit cell
     """
-    # structure_factor ---> ['P',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] 
-    _type = structure_factor[0]
-    structure_factor.pop(0)
-    # symmetry structures
-    if _type == 'P' or _type == 'R':
-        res =  structure_factor
-    elif _type == 'I': # body center
-        tran_path = [[1/2,1/2,1/2],]
-        res = translation(structure_factor,tran_path)
-    elif _type == 'C': # bottom center
-        tran_path = [[1/2, 1/2,0],]
-        res = translation(structure_factor,tran_path)
-    elif _type == 'F': # face center
-        tran_path = [[1/2, 1/2,0],[1/2, 0, 1/2],[0, 1/2, 1/2]]
-        # delete atoms outside the unit cell
-        res = translation(structure_factor,tran_path)
-    else:  
-        print('Error type -symbol- only following are allowed:')
-        print('\'P\',\'R\',\'I\',\'C\',\'F\'')
-        raise ValueError
+    # Asymmetric_atomic_coordinates ---> ['22',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] 
 
-    # v_res = det_Bravais(res)
-    # del function det_Bravais
-    return res
+    spg = Asymmetric_atomic_coordinates[0]
+    Asymmetric_atomic_coordinates.pop(0)
+    atom_loc = trans_atom(Asymmetric_atomic_coordinates,spg)
+
+    return unit_cell_range(atom_loc)
 
 # def fun for calculating extinction
 # del the peak extincted
-def cal_extinction(structure_factor,HKL_list,dis_list,system):
+def cal_extinction(Point_group,HKL_list,dis_list,system):
     HKL_list = np.array(HKL_list).tolist()
 
     # Diffraction crystal plat
@@ -303,9 +275,8 @@ def cal_extinction(structure_factor,HKL_list,dis_list,system):
     # interplanar spacing
     d_ex_HKL = []
 
-    _type = structure_factor[0]
     for angle in range(len(HKL_list)):
-        extinction = lattice_extinction(_type,HKL_list[angle],system)
+        extinction = lattice_extinction(Point_group,HKL_list[angle],system)
         if extinction == True:
             ex_HKL.append(HKL_list[angle])
             d_ex_HKL.append(dis_list[angle])
@@ -434,6 +405,64 @@ def mult_dic(HKL_list,system):
     return mult
 
 
+def apply_operation(expression, variable, value):
+    # Replace variable with given value
+    for i in range(len(variable)):
+        expression = expression.replace(variable[i], str(value[i]))
+    # Use the eval function to evaluate the result of an expression
+    result = eval(expression)
+    return result
+
+
+def trans_atom(atom_coordinate,sp_c):
+    """
+    atom_coordinate is the list of atoms in the shape of [['Cu2+',a0,b0,c0],['O2-',a1,b1,c1],...]
+    sp_c is the code of space group, a str, e.g., '121'
+    """
+
+    atom_loc = copy.deepcopy(atom_coordinate)
+    wyckoff_site = wyckoff_dict.load()
+    # Read in the wyckoff coordinates and remove spaces
+    symbols = wyckoff_site[sp_c]['site'].replace(' ', '')
+    # divide the symbols into separate operands
+    opt_list = symbols.split(',')
+    # i.e., ['x', 'y', 'z', '-x', '-y', '-z',]
+    
+    if len(opt_list) % 3 == 0: pass
+    else :
+        print('type error - wyckoff_site.json in line {}'.format(sp_c))
+        
+    # generate a sequence with an interval of 3
+    sequence = generate_sequence(0, len(opt_list)-1, 3)
+    for atom in range(len(atom_coordinate)):
+        # read in the asymmetric atoms 
+        a = atom_coordinate[atom][1]
+        b = atom_coordinate[atom][2]
+        c = atom_coordinate[atom][3]
+        # perform symmetric operations on atomic repeatedly according to wyckoff 
+        for k in sequence:
+            new_loc = [atom_coordinate[atom][0]]
+            # Determine the type of operation
+            variable = ['x','y','z']
+            value = [a,b,c]
+            _a = apply_operation(expression=opt_list[k], variable=variable, value=value)
+            new_loc.append(_a)
+            _b = apply_operation(expression=opt_list[k+1], variable=variable, value=value)
+            new_loc.append(_b)
+            _c = apply_operation(expression=opt_list[k+2], variable=variable, value=value)
+            new_loc.append(_c)
+            atom_loc.append(new_loc)
+    return atom_loc
+        
+def generate_sequence(start, end, step):
+    result = []
+    current = start
+    while current <= end:
+        result.append(current)
+        current += step
+    return result
+
+  
 # XRD wavelengths in angstroms
 WAVELENGTHS = {
     "CuKa": 1.54184,

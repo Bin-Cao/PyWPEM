@@ -269,7 +269,6 @@ def cal_delta_peak(mu_list,Ints_list,_x_sim):
         peak_inten[index] = Ints_list[i]
     return _x_sim,peak_inten
 
-
 # XRD wavelengths in angstroms
 WAVELENGTHS = {
     "CuKa": 1.54184,
