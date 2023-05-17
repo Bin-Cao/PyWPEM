@@ -404,7 +404,7 @@ class WPEMsolver(object):
             ini_w_list, ini_p1_list, ini_p2_list = self.initial_p(ini_p, area,two_theta,intensity)
         else:
             print('Your input wavelength number is unsupported in current version of  WPEM')
-        print('Parameter initialization has been completed')
+        print('Parameter initialization has been completed \n')
 
         # total number of peaks
         k_ln = int(len(ini_p1_list))
@@ -546,7 +546,7 @@ class WPEMsolver(object):
             Rwp.append(np.sqrt(wp_error_sum / obs) * 100)
             _Rsquare.append(Rsquare(y, i_obser))
 
-            print('Rp:%.3f' % (p_error_sum / obs * 100) + ' | Rwp:%.3f' % (np.sqrt(wp_error_sum / obs) * 100) + ' | Raquare:%.3f' % (Rsquare(y, i_obser)))
+            print('Rp:%.3f' % (p_error_sum / obs * 100) + ' | Rwp:%.3f' % (np.sqrt(wp_error_sum / obs) * 100) + ' | Rsquare:%.3f' % (Rsquare(y, i_obser)))
 
             # lock by detecting log likelihood
             if log_likelihood[-1] < log_likelihood[-2]:

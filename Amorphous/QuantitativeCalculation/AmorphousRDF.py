@@ -9,6 +9,7 @@ class RadialDistribution(object):
     # radial distribution function
     def __init__(self,wavelength, r_max = 5,):
         self.wavelength = wavelength
+        # the maximum of radius from a center
         self.r_max = r_max
 
         # Define the font of the image
@@ -16,12 +17,18 @@ class RadialDistribution(object):
         plt.rcParams['font.size'] = 18 
 
     def RDF(self,density_zero=None,NAa=None,highlight= 4,value=0.6):
+        # density_zero : the average density of the sample in atoms per cc.
+        # NAa : N is the effective number of atoms in the sample ; Aa is the atom scatter intensity
+        # value : assuming that the scattering can be taken as independent at sin(theta/lamda) =0.6,
         data = pd.read_csv("./DecomposedComponents/Amorphous.csv", header=None, names=['ang','int'])
         b_data = pd.read_csv("./DecomposedComponents/M_background_amorphous_stripped.csv", header=None, names=['ang','int'])
         if self.wavelength*value > 1:
             print('The input value must be smaller than % f' % 1/self.wavelength*value)
         angle = np.arcsin(self.wavelength*value) * 180 / np.pi
         
+        # N is the effective number of atoms in the sample
+        # Aa is the atom scatter intensity
+        # at large angles of scattering I(k) approaches NAa
         if NAa == None:
             # ref :
             for p in range(len(b_data.ang)):
@@ -60,8 +67,7 @@ class RadialDistribution(object):
             plt.savefig('./DecomposedComponents/RDF.png', dpi=800)
             plt.show()
             plt.clf()
-        elif type(density_zero) == float or type(density_zero) == int:
-            
+        elif type(density_zero) == float or type(density_zero) == int:   
             plt.xlabel('r/A\u00b0',)
             plt.ylabel('RDF(r)', )
             base = 4 * np.pi * r**2 * density_zero
@@ -98,6 +104,7 @@ def cal_RDF(k, int_k, r):
         area += h * l
     return area*2*r/np.pi
 
+# calculate the peak location and intervals
 def peak_detect(r,RDF_r_list,highlight):
     """
     Peak detection / 1d array
@@ -105,7 +112,6 @@ def peak_detect(r,RDF_r_list,highlight):
     :param RDF_r_list: y
     :return:
     """
-    
     b_index = [0]
     for i in range(len(RDF_r_list)-1):
         if RDF_r_list[i] *  RDF_r_list[i+1]  < 0:

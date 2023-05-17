@@ -224,11 +224,11 @@ def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, 
         std of the background distribution
     """
     module = TwiceFilter(Model)
-    module.FFTandSGFilter(intensity_csv, LFctg, lowAngleRange, bac_num, bac_split, window_length,polyorder,  poly_n, mode, bac_var_type)
+    return module.FFTandSGFilter(intensity_csv, LFctg, lowAngleRange, bac_num, bac_split, window_length,polyorder,  poly_n, mode, bac_var_type)
     
 def FileTypeCovert(file_name):
     module = TwiceFilter()
-    module.convert_file(file_name)
+    return module.convert_file(file_name)
 
 def Amorphous_fit(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
     """
@@ -247,11 +247,11 @@ def Amorphous_fit(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter =
         peak_location = [20,30,40,'fixed']
     : param Wavelength : Wavelength of ray, default is 1.54184 (Cu)
     """
-    Amorphous_fitting(mix_component, ang_range, sigma2_coef, max_iter, peak_location,Wavelength)
+    return Amorphous_fitting(mix_component, ang_range, sigma2_coef, max_iter, peak_location,Wavelength)
 
 def AmorphousRDFun(wavelength, r_max = 5,density_zero=None,NAa=None,highlight= 4,value=0.6):
     module = RadialDistribution(wavelength, r_max)
-    module.RDF(density_zero,NAa,highlight,value)
+    return module.RDF(density_zero,NAa,highlight,value)
 
 def Plot_Components(lowboundary, upboundary, wavelength,name = None, Macromolecule = False,phase = 1,Pic_Title = False):
     """
@@ -264,7 +264,7 @@ def Plot_Components(lowboundary, upboundary, wavelength,name = None, Macromolecu
     :param Pic_Title: Whether to display the title of the pictures, some title is very long
     """
     module = Decomposedpeaks()
-    module.decomposition_peak(lowboundary, upboundary, wavelength,name, Macromolecule ,phase,Pic_Title)
+    return module.decomposition_peak(lowboundary, upboundary, wavelength,name, Macromolecule ,phase,Pic_Title)
 
 def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakWidth=False, CSWPEMout = None):
     """
@@ -277,8 +277,9 @@ def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakW
         PeakWidth=False, The peak width of the simulated peak is 0
         PeakWidth=True, The peak width of the simulated peak is set to the peak obtained by WPEM
     :param CSWPEMout : location of corresponding Crystal System WPEMout file
+    return : Structure factors 
     """
-    XRD_profile(filepath,wavelength,two_theta_range,PeakWidth, CSWPEMout).Simulate()
+    return XRD_profile(filepath,wavelength,two_theta_range,PeakWidth, CSWPEMout).Simulate()
     
 def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None):
     """
@@ -297,4 +298,4 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
     latt: lattice constants : [a, b, c, al1, al2, al3]
     AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
     """
-    profile(wavelength,two_theta_range).generate(filepath,latt,AtomCoordinates)
+    return profile(wavelength,two_theta_range).generate(filepath,latt,AtomCoordinates)

@@ -104,17 +104,19 @@ def read_cif(cif_dir):
         gamma = getFloat(v['_cell_angle_gamma'])
         latt = [a, b, c, alpha, beta, gamma]
 
-        if '_symmetry_space_group_name_H-M' in v:
-            symbol = v['_symmetry_space_group_name_H-M'][0]
-        elif '_symmetry_space_group_name_Hall' in v:
+        if '_symmetry_space_group_name_Hall' in v:
             symbol = v['_symmetry_space_group_name_Hall'][0]
+            spaceG = v['_symmetry_space_group_name_Hall']
+        elif '_symmetry_space_group_name_H-M' in v:
+            symbol = v['_symmetry_space_group_name_H-M'][0]
+            spaceG = v['_symmetry_space_group_name_H-M']
         else:
             raise Exception('symmetry_space_group_name not found in {}'.format(cif_dir))
         
         sites = [symbol]
         for i, s in enumerate(v['_atom_site_type_symbol']):
             sites.append([s, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
-    return latt, symbol, sites
+    return latt, spaceG, sites
 ########################################################################
 
 def get_float(f_str, n):

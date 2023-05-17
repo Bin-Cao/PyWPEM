@@ -79,8 +79,8 @@ def cal_system(Lattice_constants):
         crystal_sys_set.append(crystal_sys) 
         # print  crystal parameters
         __name = ['Cubic', 'Hexagonal', 'Tetragonal', 'Orthorhombic', 'Rhombohedral', 'Monoclinic', 'Triclinic']
-        print("The input crystal system is:", __name[crystal_sys - 1], "The initial inputs :", ini_a, ini_b, ini_c,
-                ini_la1, ini_la2, ini_la3)
+        print("The input crystal system is:", __name[crystal_sys - 1],' | ', "The initial lattice constants :", ini_a, ini_b, ini_c,
+                ini_la1, ini_la2, ini_la3 )
     return crystal_sys_set
 
 # Determination Coefficient
