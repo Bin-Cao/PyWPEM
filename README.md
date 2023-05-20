@@ -21,6 +21,9 @@ PyWPEM/
         __init__.py
         pymatgen_cif.py
         XRDpre.py
+        wyckoff/
+          __init__.py
+          wyckoff_dict.py 
     Background/
         __init__.py
         BacDeduct.py
