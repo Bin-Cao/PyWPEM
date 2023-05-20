@@ -446,11 +446,11 @@ def trans_atom(atom_coordinate,sp_c):
             variable = ['x','y','z']
             value = [a,b,c]
             _a = apply_operation(expression=opt_list[k], variable=variable, value=value)
-            new_loc.append(_a)
+            new_loc.append(get_float(_a,5))
             _b = apply_operation(expression=opt_list[k+1], variable=variable, value=value)
-            new_loc.append(_b)
+            new_loc.append(get_float(_b,5))
             _c = apply_operation(expression=opt_list[k+2], variable=variable, value=value)
-            new_loc.append(_c)
+            new_loc.append(get_float(_c,5))
             atom_loc.append(new_loc)
     return atom_loc
         
