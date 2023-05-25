@@ -19,7 +19,7 @@ PyWPEM/
     WPEM.py
     Extinction/
         __init__.py
-        pymatgen_cif.py
+        CifReader.py
         XRDpre.py
         wyckoff/
           __init__.py
