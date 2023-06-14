@@ -10,6 +10,7 @@ import os
 import re
 from ..Extinction.XRDpre import profile
 from .DiffractionGrometry.atom import atomics
+from ..EMBraggOpt.WPEMFuns.SolverFuns import theta_intensity_area
         
 class XRD_profile(object):
     def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakWidth=False, CSWPEMout = None):
@@ -93,12 +94,17 @@ class XRD_profile(object):
             for num in range(len(Ints)):
                 _ = draw_peak_density(x_sim, Ints[num], self.mu_list[num], self.gamma_list[num], self.sigma2_list[num])
                 y_sim += _
+            # normalize the profile
+            nor_y = y_sim / theta_intensity_area(x_sim,y_sim)
         elif self.PeakWidth == False:
             _x_sim = np.arange(self.two_theta_range[0],self.two_theta_range[1],self.two_theta_range[2])
             x_sim,y_sim = cal_delta_peak(self.mu_list,Ints,_x_sim)
+            # normalize the profile
+            nor_y = y_sim / y_sim.sum()
 
+        
         # save simulation results
-        plt.plot(x_sim, y_sim, '-g', label= "Simulated  Profile (crystal)", )
+        plt.plot(x_sim, nor_y, '-g', label= "Simulated Profile (crystal)", )
         plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
         plt.legend()
@@ -119,7 +125,7 @@ class XRD_profile(object):
 
         profile = []
         for i in range(len(x_sim)):
-            profile.append([i+1, x_sim[i], y_sim[i]])
+            profile.append([i+1, x_sim[i], nor_y[i]])
         profile.insert(0, ['No.', 'x_simu', 'y_simu'])
         save_file = 'Simulation_WPEM/Simu_profile.csv'
         dataFile = open(save_file, 'w')
@@ -213,7 +219,7 @@ def cal_atoms(ion, angle, wavelength,):
         dict[ion]
     except:
         # atomic unionized forms
-        # Planned replacement with Thomas-Fermi method
+        # Plan to replaces with Thomas-Fermi method
         ion = getHeavyatom(ion)
     loc = np.sin(angle / 2 * np.pi/180) / wavelength 
     floor_ = get_float(loc,1)

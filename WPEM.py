@@ -281,7 +281,7 @@ def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakW
     """
     return XRD_profile(filepath,wavelength,two_theta_range,PeakWidth, CSWPEMout).Simulate()
     
-def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None):
+def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False):
     """
     for a single crystal
     Computes the XRD pattern and save to csv file
@@ -298,4 +298,4 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
     latt: lattice constants : [a, b, c, al1, al2, al3]
     AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
     """
-    return profile(wavelength,two_theta_range).generate(filepath,latt,AtomCoordinates)
+    return profile(wavelength,two_theta_range,show_unitcell).generate(filepath,latt,AtomCoordinates)
