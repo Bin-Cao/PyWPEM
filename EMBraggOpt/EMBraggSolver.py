@@ -279,7 +279,8 @@ class WPEMsolver(object):
 
                 peakdata = pd.read_csv('peak{task}.csv'.format(task=task))
                 Mult = np.array(peakdata.Mult)
-        
+                
+
                 with open(os.path.join('WPEMFittingResults','CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
                                            Task=task, year=namey, month=nameM, day=named, hour=nameh,minute=namem)), 'w') as wfid:
                     print('code', end=',', file=wfid)
@@ -301,7 +302,7 @@ class WPEMsolver(object):
                     print('gamma=%f' % ini_CL[task][5], file=wfid)
                     for j in range(len(mui_abc_set[task])):
                         t = int(j / 2)
-                        print(j % 2 + 1, end=',', file=wfid)
+                        print((j % 2)*(len(self.wavelength)-1), end=',', file=wfid)
                         print(hkl_data[task][0][t], end=',', file=wfid)
                         print(hkl_data[task][1][t], end=',', file=wfid)
                         print(hkl_data[task][2] [t], end=',', file=wfid)
@@ -336,7 +337,7 @@ class WPEMsolver(object):
                         print('gamma=%f' % ini_CL[task][5], file=wfid)
                         for j in range(len(mui_abc_set[task])):
                             t = int(j / 2)
-                            print(j % 2 + 1, end=',', file=wfid)
+                            print((j % 2)*(len(self.wavelength)-1), end=',', file=wfid)
                             print(hkl_data[task][0][t], end=',', file=wfid)
                             print(hkl_data[task][1][t], end=',', file=wfid)
                             print(hkl_data[task][2][t], end=',', file=wfid)
@@ -535,6 +536,7 @@ class WPEMsolver(object):
             wp_error = []  
             _Rsquare = [] # R2
             y = []
+
             for j in range(len(two_theta)):
                 y.append(bac[j] + i_epoch[j])
                 p_error.append(float(abs(y[j] - i_obser[j])))

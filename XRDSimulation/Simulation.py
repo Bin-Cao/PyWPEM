@@ -13,17 +13,24 @@ from .DiffractionGrometry.atom import atomics
 from ..EMBraggOpt.WPEMFuns.SolverFuns import theta_intensity_area
         
 class XRD_profile(object):
-    def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakWidth=False, CSWPEMout = None):
+    def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01), LatticCs = None,PeakWidth=False, CSWPEMout = None):
         # filepath : the path of the cif file
         # CSWPEMout : Crystal System WPEMout file
         # PeakWidth=False, The peak width of the simulated peak is 0
         # PeakWidth=True, The peak width of the simulated peak is set to the peak obtained by WPEM
+        # LatticCs : the lattic constants after WPEM refinement, default = None, if None,
+        # WPEM reads lattice constants from an input cif file 
         # read parameters from cif by ..Extinction.XRDpre
         _range = (two_theta_range[0],two_theta_range[1])
-        LatticCs, Atom_coordinate = profile(wavelength,_range).generate(filepath)
+        if LatticCs == None:
+            LatticCs, Atom_coordinate = profile(wavelength,_range).generate(filepath)
+        elif type(LatticCs) == list and len(LatticCs) == 6 : 
+            _, Atom_coordinate = profile(wavelength,_range).generate(filepath)
+        else : print('Type Error of Param LatticCs')
         print('\n')
         self.LatticCs = LatticCs
         self.two_theta_range = two_theta_range 
+
         self.crystal_system = det_system(LatticCs)
         self.Atom_coordinate = Atom_coordinate   
         #  i.e., [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] 
@@ -61,7 +68,7 @@ class XRD_profile(object):
         plt.rcParams['font.size'] = 15
         os.makedirs('Simulation_WPEM', exist_ok=True)
 
-    def Simulate(self,):
+    def Simulate(self,plot=True, write_in = True):
         FHKL_square = [] # [FHKL2_1, FHKL2_2,...] a list has the same length with HKL_list
         for angle in range(len(self.HKL_list)):
             FHKL_square_left = 0
@@ -75,7 +82,7 @@ class XRD_profile(object):
             FHKL_square.append(FHKL_square_left ** 2 + FHKL_square_right ** 2)
 
         # cal unit cell volume
-        VolumeFunction = self.LatticVolume()
+        VolumeFunction = LatticVolume(self.crystal_system)
         sym_a, sym_b, sym_c, angle1, angle2, angle3 = symbols('sym_a sym_b sym_c angle1 angle2 angle3')
         Volume = (float(VolumeFunction.subs(
             {sym_a: self.LatticCs[0], sym_b: self.LatticCs[1], sym_c: self.LatticCs[2],
@@ -102,63 +109,44 @@ class XRD_profile(object):
             # normalize the profile
             nor_y = y_sim / y_sim.sum()
 
+        if plot == True:
+            # save simulation results
+            plt.plot(x_sim, nor_y, '-g', label= "Simulated Profile (crystal)", )
+            plt.xlabel('2\u03b8\u00B0')
+            plt.ylabel('I (a.u.)')
+            plt.legend()
+            plt.savefig('./Simulation_WPEM/Simulation_profile.png', dpi=800)
+            plt.show()
+            plt.clf()
+        else: pass
         
-        # save simulation results
-        plt.plot(x_sim, nor_y, '-g', label= "Simulated Profile (crystal)", )
-        plt.xlabel('2\u03b8\u00B0')
-        plt.ylabel('I (a.u.)')
-        plt.legend()
-        plt.savefig('./Simulation_WPEM/Simulation_profile.png', dpi=800)
-        plt.show()
-        plt.clf()
-        
-        # Save the simulated peak
-        res = []
-        for i in range(len(Ints)):
-            res.append([i+1, self.HKL_list[i][0], self.HKL_list[i][1], self.HKL_list[i][2], self.Mult[i], self.mu_list[i],Ints[i]])
-        res.insert(0, ['No.', 'H', 'K', 'L', 'Mult', '2theta/','Ints/'])
-        save_file = 'Simulation_WPEM/Bragg_peaks.csv'
-        dataFile = open(save_file, 'w')
-        dataWriter = csv.writer(dataFile)
-        dataWriter.writerows(res)
-        dataFile.close()
 
-        profile = []
-        for i in range(len(x_sim)):
-            profile.append([i+1, x_sim[i], nor_y[i]])
-        profile.insert(0, ['No.', 'x_simu', 'y_simu'])
-        save_file = 'Simulation_WPEM/Simu_profile.csv'
-        dataFile = open(save_file, 'w')
-        dataWriter = csv.writer(dataFile)
-        dataWriter.writerows(profile)
-        dataFile.close()
-        print('XRD simulation process of WPEM is completed !')
-        return FHKL_square
+        if write_in == True:
+            # Save the simulated peak
+            res = []
+            for i in range(len(Ints)):
+                res.append([i+1, self.HKL_list[i][0], self.HKL_list[i][1], self.HKL_list[i][2], self.Mult[i], self.mu_list[i],Ints[i]])
+            res.insert(0, ['No.', 'H', 'K', 'L', 'Mult', '2theta/','Ints/'])
+            save_file = 'Simulation_WPEM/Bragg_peaks.csv'
+            dataFile = open(save_file, 'w')
+            dataWriter = csv.writer(dataFile)
+            dataWriter.writerows(res)
+            dataFile.close()
+
+            profile = []
+            for i in range(len(x_sim)):
+                profile.append([i+1, x_sim[i], nor_y[i]])
+            profile.insert(0, ['No.', 'x_simu', 'y_simu'])
+            save_file = 'Simulation_WPEM/Simu_profile.csv'
+            dataFile = open(save_file, 'w')
+            dataWriter = csv.writer(dataFile)
+            dataWriter.writerows(profile)
+            dataFile.close()
+            print('XRD simulation process of WPEM is completed !')
+        else: pass
+
+        return FHKL_square,x_sim,nor_y
     
-    def LatticVolume(self, ):
-        """
-        returns the unit cell volume
-        """
-        sym_a, sym_b, sym_c, angle1, angle2, angle3 = \
-            symbols('sym_a sym_b sym_c angle1 angle2 angle3')
-        if self.crystal_system == 1:  # Cubic
-            Volume = sym_a ** 3
-        elif self.crystal_system == 2:  # Hexagonal
-            Volume = sym_a ** 2 * sym_c * np.sqrt(3) / 2
-        elif self.crystal_system == 3:  # Tetragonal
-            Volume = sym_a * sym_a * sym_c
-        elif self.crystal_system == 4:  # Orthorhombic
-            Volume = sym_a * sym_b * sym_c
-        elif self.crystal_system == 5:  # Rhombohedral
-            Volume = sym_a ** 3 * np.sqrt(1 - 3 * cos(angle1) ** 2 + 2 * cos(angle1) ** 3)
-        elif self.crystal_system == 6:  # Monoclinic
-            Volume = sym_a * sym_b * sym_c * sin(angle2)
-        elif self.crystal_system == 7:  # Triclinic
-            Volume = sym_a * sym_b * sym_c * np.sqrt(1 - cos(angle1) ** 2 - cos(angle2) **2
-                                              - cos(angle3) ** 2 + 2 * cos(angle1) * cos(angle2) * cos(angle3))
-        else:
-            Volume = -1
-        return Volume
 
 
 def get_float(f_str, n):
@@ -274,6 +262,31 @@ def cal_delta_peak(mu_list,Ints_list,_x_sim):
     for i, index in enumerate(nearest_indices):
         peak_inten[index] = Ints_list[i]
     return _x_sim,peak_inten
+
+def LatticVolume(crystal_system):
+        """
+        returns the unit cell volume
+        """
+        sym_a, sym_b, sym_c, angle1, angle2, angle3 = \
+            symbols('sym_a sym_b sym_c angle1 angle2 angle3')
+        if crystal_system == 1:  # Cubic
+            Volume = sym_a ** 3
+        elif crystal_system == 2:  # Hexagonal
+            Volume = sym_a ** 2 * sym_c * np.sqrt(3) / 2
+        elif crystal_system == 3:  # Tetragonal
+            Volume = sym_a * sym_a * sym_c
+        elif crystal_system == 4:  # Orthorhombic
+            Volume = sym_a * sym_b * sym_c
+        elif crystal_system == 5:  # Rhombohedral
+            Volume = sym_a ** 3 * np.sqrt(1 - 3 * cos(angle1) ** 2 + 2 * cos(angle1) ** 3)
+        elif crystal_system == 6:  # Monoclinic
+            Volume = sym_a * sym_b * sym_c * sin(angle2)
+        elif crystal_system == 7:  # Triclinic
+            Volume = sym_a * sym_b * sym_c * np.sqrt(1 - cos(angle1) ** 2 - cos(angle2) **2
+                                              - cos(angle3) ** 2 + 2 * cos(angle1) * cos(angle2) * cos(angle3))
+        else:
+            Volume = -1
+        return Volume
 
 # XRD wavelengths in angstroms
 WAVELENGTHS = {

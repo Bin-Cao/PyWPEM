@@ -232,27 +232,61 @@ def unit_cell_range(ori_atom):
         x_ = ori_atom[atom][1]
         y_ = ori_atom[atom][2]
         z_ = ori_atom[atom][3]
+
+        if x_ < 0 : x_ += 1 
+        elif x_ > 1 : x_ -= 1
+        else : pass 
+
+        if y_ < 0 : y_ += 1 
+        elif y_ > 1 : y_ -= 1
+        else : pass
+
+        if z_ < 0 : z_ += 1 
+        elif z_ > 1 : z_ -= 1
+        else : pass
+
+        x_ = get_float(x_,3)
+        y_ = get_float(y_,3)
+        z_ = get_float(z_,3)
+
         if 0 <= x_ <=1 and 0 <= y_ <=1 and 0 <= z_ <=1:
-            unit_cell_atom.append(ori_atom[atom])
-        elif 0 <= (x_-1) <=1 and 0 <= (y_-1) <=1 and 0 <= (z_-1) <=1:
-            move_atom = ori_atom[atom]
-            move_atom[1] -= 1
-            move_atom[2] -= 1
-            move_atom[3] -= 1
-            unit_cell_atom.append(move_atom)
-        elif 0 <= (x_+1) <=1 and 0 <= (y_+1) <=1 and 0 <= (z_+1) <=1:
-            move_atom = ori_atom[atom]
-            move_atom[1] += 1
-            move_atom[2] += 1
-            move_atom[3] += 1
-            unit_cell_atom.append(move_atom)
+            ori_atom[atom][1] = x_  
+            ori_atom[atom][2] = y_
+            ori_atom[atom][3] = z_
+            unit_cell_atom.append(ori_atom[atom])  
         else: pass
     
     unique_data = []
     for item in unit_cell_atom:
-        if item not in unique_data:
+        # delete repeating points 
+        if item not in unique_data: 
             unique_data.append(item)
     return unique_data
+"""
+unique_data = []
+for item in unit_cell_atom:
+    # delete repeating points 
+    if item not in unique_data: # x,y,z
+        coordinate = copy.deepcopy(item)
+        print('coordinate',coordinate)
+        # Coordinate rotation
+        axis_x = coordinate[1]
+        axis_y = coordinate[2]
+        axis_z = coordinate[3]
+        # y,z,x
+        rot_first = [coordinate[0]]
+        rot_first.append(axis_y) , 
+        rot_first.append(axis_z) 
+        rot_first.append(axis_x)
+        # z,x,y
+        rot_second = [coordinate[0]]
+        rot_second.append(axis_z)
+        rot_second.append(axis_x)
+        rot_second.append(axis_y)
+        print(rot_first)
+        if rot_first not in unique_data and rot_second not in unique_data:
+            unique_data.append(item)
+"""
 
 
 def UnitCellAtom(Asymmetric_atomic_coordinates):
@@ -264,7 +298,6 @@ def UnitCellAtom(Asymmetric_atomic_coordinates):
     spg = Asymmetric_atomic_coordinates[0]
     Asymmetric_atomic_coordinates.pop(0)
     atom_loc = trans_atom(Asymmetric_atomic_coordinates,spg)
-
     return unit_cell_range(atom_loc)
 
 # def fun for calculating extinction
@@ -469,9 +502,9 @@ def trans_atom(atom_coordinate,sp_c):
             variable = ['x','y','z']
             value = [a,b,c]
             loc = apply_operation(expression=equivalent_pos[k], variable=variable, value=value)
-            new_loc.append(get_float(loc[0],5))
-            new_loc.append(get_float(loc[1],5))
-            new_loc.append(get_float(loc[2],5))
+            new_loc.append(loc[0])
+            new_loc.append(loc[1])
+            new_loc.append(loc[2])
             atom_loc.append(new_loc)
     return atom_loc
 

@@ -19,7 +19,6 @@ class plotUnitCell(object):
         interact_func = interactive(self.sub_plot,elevation=elevation_slider, azimuth=azimuth_slider)
         interact_func.children[0].value = 30  
         interact_func.children[1].value = 60  
-
         display(interact_func)
         plt.show()
 
@@ -87,10 +86,9 @@ class plotUnitCell(object):
             if ion not in atom_list: atom_list.append(ion)
             size = dict[ion]['0']
 
-            cmap = plt.cm.get_cmap('tab10')
             point = np.array([x*a, y*b, z*c])
             transformed_point = (rotation_matrix @ (point - translation_vector)).T
-            ax.scatter(transformed_point[0], transformed_point[1], transformed_point[2], c=[cmap(atom_list.index(ion))], s=(5*size),marker='o', edgecolor='black',alpha=1.0)
+            ax.scatter(transformed_point[0], transformed_point[1], transformed_point[2], c=colors[atom_list.index(ion)], s=(5*size),marker='o', edgecolor='black',alpha=1.0)
 
         ax.view_init(elev=elevation, azim=azimuth)
 
@@ -120,3 +118,6 @@ def getHeavyatom(s):
     # Define a function called getHeavyatom that takes one parameter: s, a string that contains letters and/or non-letter characters.
     return re.sub(r'[^A-Za-z]+', "", s)
     # Use the re.sub() function to replace all non-letter characters in s with an empty string. Return the modified string.
+
+colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#800000', '#008000', '#000080', '#808000',
+              '#800080', '#008080', '#FFA500', '#FFC0CB', '#FFD700', '#008B8B', '#00FF7F', '#7B68EE', '#FF4500', '#FF1493']

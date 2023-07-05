@@ -77,6 +77,7 @@ from .Amorphous.QuantitativeCalculation.AmorphousRDF import RadialDistribution
 from .DecomposePlot.plot import Decomposedpeaks
 from .XRDSimulation.Simulation import XRD_profile
 from .Extinction.XRDpre import profile
+from .StructureOpt.SiteOpt import BgolearnOpt
 # from .Raman.Decompose.RamanFitting import fit
 import datetime
 from time import time
@@ -266,7 +267,7 @@ def Plot_Components(lowboundary, upboundary, wavelength,name = None, Macromolecu
     module = Decomposedpeaks()
     return module.decomposition_peak(lowboundary, upboundary, wavelength,name, Macromolecule ,phase,Pic_Title)
 
-def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakWidth=False, CSWPEMout = None):
+def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),LatticCs = None,PeakWidth=False, CSWPEMout = None):
     """
     :param filepath (str): file path of the cif file to be calculated
     :param two_theta_range ([float of length 2]): Tuple for range of
@@ -279,7 +280,7 @@ def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),PeakW
     :param CSWPEMout : location of corresponding Crystal System WPEMout file
     return : Structure factors 
     """
-    return XRD_profile(filepath,wavelength,two_theta_range,PeakWidth, CSWPEMout).Simulate()
+    return XRD_profile(filepath,wavelength,two_theta_range,LatticCs,PeakWidth, CSWPEMout).Simulate()
     
 def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False):
     """
@@ -299,3 +300,6 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
     AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
     """
     return profile(wavelength,two_theta_range,show_unitcell).generate(filepath,latt,AtomCoordinates)
+
+def SubstitutionalSearch(xrd_pattern, cif_file,random_num=8, wavelength='CuKa',search_cap=50,SolventAtom = None, SoluteAtom= None,max_iter = 100):
+    return BgolearnOpt(xrd_pattern, cif_file, random_num,wavelength,search_cap). Substitutional_SS(SolventAtom, SoluteAtom ,max_iter)
