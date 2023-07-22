@@ -1,4 +1,11 @@
 """
+██╗    ██╗██████╗ ███████╗███╗   ███╗
+██║    ██║██╔══██╗██╔════╝████╗ ████║
+██║ █╗ ██║██████╔╝█████╗  ██╔████╔██║
+██║███╗██║██╔═══╝ ██╔══╝  ██║╚██╔╝██║
+╚███╔███╔╝██║     ███████╗██║ ╚═╝ ██║
+ ╚══╝╚══╝ ╚═╝     ╚══════╝╚═╝     ╚═╝                                                  
+
 module WPEM: The main call interface of WPEM, including the following functions and subroutines.
 
 Author: Bin CAO <binjacobcao@gmail.com>
@@ -83,14 +90,24 @@ import datetime
 from time import time
 import datetime
 
+
+logo = '''
+██╗    ██╗██████╗ ███████╗███╗   ███╗
+██║    ██║██╔══██╗██╔════╝████╗ ████║
+██║ █╗ ██║██████╔╝█████╗  ██╔████╔██║
+██║███╗██║██╔═══╝ ██╔══╝  ██║╚██╔╝██║
+╚███╔███╔╝██║     ███████╗██║ ╚═╝ ██║
+ ╚══╝╚══╝ ╚═╝     ╚══════╝╚═╝     ╚═╝                                                  
+'''
+
 now = datetime.datetime.now()
 formatted_date_time = now.strftime('%Y-%m-%d %H:%M:%S')
-
+print(logo)
 print('A Diffraction Refinement Software : WPEM')
-print('Bin Cao, MGI, Shanghai University, Shanghai, CHINA.')
+print('Bin Cao, Advanced Materials Thrust, Hong Kong University of Science and Technology (Guangzhou)')
 print('URL : https://github.com/Bin-Cao/WPEM')
-print('Executed on :',formatted_date_time, ' Have a great day.')
-print('\n')
+print('Executed on :',formatted_date_time, ' | Have a great day.')
+print('='*100)
 
 def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, two_theta_range = None,structure_factor = None, 
         bta=0.8, bta_threshold = 0.5,limit=0.0005, iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0.5, s_angle=50, 
@@ -303,3 +320,8 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
 
 def SubstitutionalSearch(xrd_pattern, cif_file,random_num=8, wavelength='CuKa',search_cap=50,SolventAtom = None, SoluteAtom= None,max_iter = 100):
     return BgolearnOpt(xrd_pattern, cif_file, random_num,wavelength,search_cap). Substitutional_SS(SolventAtom, SoluteAtom ,max_iter)
+
+
+
+
+

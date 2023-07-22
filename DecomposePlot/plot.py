@@ -44,7 +44,7 @@ class Decomposedpeaks():
 
         # Define the font of images
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 15 
+        plt.rcParams['font.size'] = 12 
 
         if Macromolecule == False:
             # if Macromolecule == False, real and fitting profile are total intensity contains bac!

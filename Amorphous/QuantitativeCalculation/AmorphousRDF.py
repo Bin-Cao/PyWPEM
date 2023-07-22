@@ -14,7 +14,7 @@ class RadialDistribution(object):
 
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 18 
+        plt.rcParams['font.size'] = 12 
 
     def RDF(self,density_zero=None,NAa=None,highlight= 4,value=0.6):
         # density_zero : the average density of the sample in atoms per cc.

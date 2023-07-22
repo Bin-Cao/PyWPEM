@@ -65,7 +65,7 @@ class XRD_profile(object):
         self.PeakWidth = PeakWidth
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 15
+        plt.rcParams['font.size'] = 12
         os.makedirs('Simulation_WPEM', exist_ok=True)
 
     def Simulate(self,plot=True, write_in = True):

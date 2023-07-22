@@ -53,15 +53,27 @@ class profile:
         if type(filepath) != str:
             print('Need to specify the file (.cif) path to be processed')
         else:
-            try:
-                latt, space_g, Asymmetric_atomic_coordinates,Point_group= read_cif(filepath)
+            latt, space_g, Asymmetric_atomic_coordinates,Point_group, symmetric_operation = read_cif(filepath)
+            if space_g != None:
                 print('the space group of input crystal is :',space_g )
-                print('cif file parse completed')
-            except:
+            print('cif file parse completed')
+
+            # check 
+            if latt == None or Point_group == None or Asymmetric_atomic_coordinates == None:
                 print('cif file parse failed with error')
-                print('Please replace another cif file, or enter manually input lattice constants and  structure factor')
+                print('Please replace another cif file, or enter manually the essential params!')
+                if latt == None:
+                    __latt = input("Please input lattice constants (i.e., 3.12,3.12,3.12,90,90,90): ")
+                    latt = list(eval(__latt))
+                if Point_group == None:
+                    __Point_group = input("Please input point_group singal (i.e., F):")
+                    Point_group = str(__Point_group)
+                if Asymmetric_atomic_coordinates == None:
+                    __Asymmetric_atomic_coordinates = input("Please input asymmetric_atomic_coordinates, contains space group code (i.e., 72,['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....):")
+                    Asymmetric_atomic_coordinates = list(eval(__Asymmetric_atomic_coordinates))
+            else: pass
         
-        AtomCoordinates= UnitCellAtom(copy.deepcopy(Asymmetric_atomic_coordinates))
+        AtomCoordinates= UnitCellAtom(copy.deepcopy(Asymmetric_atomic_coordinates),symmetric_operation)
         system = det_system(latt)
 
         grid, d_list = Diffraction_index(system,latt,self.wavelength,self.two_theta_range)
@@ -103,15 +115,30 @@ def read_cif(cif_dir):
     cif = CifFile.from_file(cif_dir)
     for k in cif.data:
         v = cif.data[k].data
-
-        a = getFloat(v['_cell_length_a'])
-        b = getFloat(v['_cell_length_b'])
-        c = getFloat(v['_cell_length_c'])
-        alpha = getFloat(v['_cell_angle_alpha'])
-        beta = getFloat(v['_cell_angle_beta'])
-        gamma = getFloat(v['_cell_angle_gamma'])
-        space_group_code = int(v['_symmetry_Int_Tables_number'])
-        latt = [a, b, c, alpha, beta, gamma]
+        try:
+            a = getFloat(v['_cell_length_a'])
+            b = getFloat(v['_cell_length_b'])
+            c = getFloat(v['_cell_length_c'])
+            alpha = getFloat(v['_cell_angle_alpha'])
+            beta = getFloat(v['_cell_angle_beta'])
+            gamma = getFloat(v['_cell_angle_gamma'])
+            latt = [a, b, c, alpha, beta, gamma]
+        except: latt = None
+        try:
+            space_group_code = int(v['_symmetry_Int_Tables_number'])
+            sites = [space_group_code]
+            try:
+                for i, name in enumerate(v['_atom_site_type_symbol']):
+                    sites.append([name, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
+            except: sites = None
+        except:
+            space_group_code = None
+            sites = None
+        try:
+            symmetric_operation = list(v['_space_group_symop_operation_xyz'])
+        except:
+            symmetric_operation = None
+        
 
         if '_symmetry_space_group_name_Hall' in v:
             symbol = v['_symmetry_space_group_name_Hall'][0]
@@ -120,12 +147,10 @@ def read_cif(cif_dir):
             symbol = v['_symmetry_space_group_name_H-M'][0]
             spaceG = v['_symmetry_space_group_name_H-M']
         else:
-            raise Exception('symmetry_space_group_name not found in {}'.format(cif_dir))
+            symbol = None
+            spaceG = None
         
-        sites = [space_group_code]
-        for i, name in enumerate(v['_atom_site_type_symbol']):
-            sites.append([name, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
-    return latt, spaceG, sites,symbol
+    return latt, spaceG, sites, symbol,symmetric_operation
 ########################################################################
 
 def get_float(f_str, n):
@@ -259,9 +284,30 @@ def unit_cell_range(ori_atom):
     unique_data = []
     for item in unit_cell_atom:
         # delete repeating points 
-        if item not in unique_data: 
+        if 1 not in item:
+            trans_item = [item]
+        else:
+            trans_item = trans_(item)
+        add = True
+        for d in range(len(trans_item)):
+            if trans_item[d] in unique_data: add = 0
+        if add == 1:
             unique_data.append(item)
     return unique_data
+
+
+def trans_(lst):
+    result = []
+    indices = [i for i, x in enumerate(lst) if x == 1]
+    num_ones = len(indices)
+    
+    for i in range(2**num_ones):
+        binary = bin(i)[2:].zfill(num_ones)
+        new_lst = [0 if j in indices and binary[indices.index(j)] == '1' else x for j, x in enumerate(lst)]
+        result.append(new_lst)
+    
+    return result
+
 """
 unique_data = []
 for item in unit_cell_atom:
@@ -289,7 +335,7 @@ for item in unit_cell_atom:
 """
 
 
-def UnitCellAtom(Asymmetric_atomic_coordinates):
+def UnitCellAtom(Asymmetric_atomic_coordinates,symmetric_operation):
     """
     Find all atomic positions in the unit cell
     """
@@ -297,7 +343,7 @@ def UnitCellAtom(Asymmetric_atomic_coordinates):
 
     spg = Asymmetric_atomic_coordinates[0]
     Asymmetric_atomic_coordinates.pop(0)
-    atom_loc = trans_atom(Asymmetric_atomic_coordinates,spg)
+    atom_loc = trans_atom(Asymmetric_atomic_coordinates,spg,symmetric_operation)
     return unit_cell_range(atom_loc)
 
 # def fun for calculating extinction
@@ -477,35 +523,56 @@ def apply_operation(expression, variable, value):
     return result
 
 
-def trans_atom(atom_coordinate,sp_c):
+def trans_atom(atom_coordinate,sp_c,symmetric_operation):
     """
     atom_coordinate is the list of atoms in the shape of [['Cu2+',a0,b0,c0],['O2-',a1,b1,c1],...]
     sp_c is the code of space group, a int, e.g., 121
     """
     atom_loc = copy.deepcopy(atom_coordinate)
-    wyckoff_site = wyckoff_dict.load()
-    # Read in the wyckoff coordinates a
-    opt_list = eval(np.array(wyckoff_site.iloc[sp_c,:])[0])
-
-    # i.e., [['x', 'y', 'z', '-x', '-y', '-z',],[],]
+    if type(symmetric_operation) == list:
+        print('atom locations claculated by parsed cif file')
+        # move atom directly
+        for atom in range(len(atom_coordinate)):
+            # read in the asymmetric atoms coordinates
+            a = atom_coordinate[atom][1]
+            b = atom_coordinate[atom][2]
+            c = atom_coordinate[atom][3]
+            for k in range(len(symmetric_operation)):
+                new_loc = [atom_coordinate[atom][0]]
+                # Determine the type of operation
+                variable = ['x','y','z']
+                value = [a,b,c]
+                loc = apply_operation(expression=symmetric_operation[k], variable=variable, value=value)
+                new_loc.append(loc[0])
+                new_loc.append(loc[1])
+                new_loc.append(loc[2])
+                atom_loc.append(new_loc)
         
-    for atom in range(len(atom_coordinate)):
-        # read in the asymmetric atoms coordinates
-        a = atom_coordinate[atom][1]
-        b = atom_coordinate[atom][2]
-        c = atom_coordinate[atom][3]
-        equivalent_pos = check_notations(a, b, c, opt_list) 
-        # perform symmetric operations on atomic repeatedly according to wyckoff 
-        for k in range(len(equivalent_pos)):
-            new_loc = [atom_coordinate[atom][0]]
-            # Determine the type of operation
-            variable = ['x','y','z']
-            value = [a,b,c]
-            loc = apply_operation(expression=equivalent_pos[k], variable=variable, value=value)
-            new_loc.append(loc[0])
-            new_loc.append(loc[1])
-            new_loc.append(loc[2])
-            atom_loc.append(new_loc)
+    else:
+        print('atom locations claculated by wyckoff site')
+        wyckoff_site = wyckoff_dict.load()
+        # Read in the wyckoff coordinates a
+        opt_list = eval(np.array(wyckoff_site.iloc[sp_c,:])[0])
+
+        # i.e., [['x', 'y', 'z', '-x', '-y', '-z',],[],]
+            
+        for atom in range(len(atom_coordinate)):
+            # read in the asymmetric atoms coordinates
+            a = atom_coordinate[atom][1]
+            b = atom_coordinate[atom][2]
+            c = atom_coordinate[atom][3]
+            equivalent_pos = check_notations(a, b, c, opt_list) 
+            # perform symmetric operations on atomic repeatedly according to wyckoff 
+            for k in range(len(equivalent_pos)):
+                new_loc = [atom_coordinate[atom][0]]
+                # Determine the type of operation
+                variable = ['x','y','z']
+                value = [a,b,c]
+                loc = apply_operation(expression=equivalent_pos[k], variable=variable, value=value)
+                new_loc.append(loc[0])
+                new_loc.append(loc[1])
+                new_loc.append(loc[2])
+                atom_loc.append(new_loc)
     return atom_loc
 
 def check_notations(a, b, c, opt_list) :

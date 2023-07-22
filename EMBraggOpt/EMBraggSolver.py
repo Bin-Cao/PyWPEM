@@ -64,7 +64,7 @@ class WPEMsolver(object):
         
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 15
+        plt.rcParams['font.size'] = 12
         
         # mike dir
         os.makedirs('DecomposedComponents', exist_ok=True)
@@ -540,7 +540,7 @@ class WPEMsolver(object):
             for j in range(len(two_theta)):
                 y.append(bac[j] + i_epoch[j])
                 p_error.append(float(abs(y[j] - i_obser[j])))
-                wp_error.append((p_error[j] ** 2) / float(i_obser[j]))
+                wp_error.append((p_error[j] ** 2) / max(float(i_obser[j]),1))
             obs = sum(i_obser)
             p_error_sum = sum(p_error)
             wp_error_sum = sum(wp_error)
@@ -656,7 +656,8 @@ class WPEMsolver(object):
         for j in range(len(two_theta)):
             y.append(bac_up[j] + i_calc[j] + min_i)
             p_error.append(float(abs(y[j] - i_obser[j])))
-            wp_error.append((p_error[j] ** 2) / float(i_obser[j]))
+            # in case the real intensity equal to zero
+            wp_error.append((p_error[j] ** 2) / max(float(i_obser[j]),1))
 
         obs = sum(i_obser)
         p_error_sum = sum(p_error)

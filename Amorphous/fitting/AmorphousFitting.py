@@ -169,7 +169,7 @@ def Amorphous_fitting(mix_component, ang_range = None, sigma2_coef = 0.5, max_it
     
    # Define the font of the image
     plt.rcParams['font.family'] = 'sans-serif'
-    plt.rcParams['font.size'] = 15
+    plt.rcParams['font.size'] = 12
     
     plt.xlabel('2\u03b8\u00B0')
     plt.ylabel('I (a.u.)')

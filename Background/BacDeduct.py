@@ -96,7 +96,7 @@ class TwiceFilter:
         """
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['font.size'] = 15
+        plt.rcParams['font.size'] = 12
 
         import heapq
         import numpy.fft as nf
