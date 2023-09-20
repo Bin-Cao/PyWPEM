@@ -8,6 +8,7 @@ import copy
 import numpy as np
 import pandas as pd
 import re
+import sys
 from .wyckoff import wyckoff_dict
 from .CifReader import CifFile
 from ..XRDSimulation.DiffractionGrometry.atom import atomics
@@ -15,7 +16,7 @@ from ..EMBraggOpt.BraggLawDerivation import BraggLawDerivation
 from ..Plot.UnitCell import plotUnitCell
 
 class profile:
-    def __init__(self, wavelength='CuKa',two_theta_range=(10, 90),show_unitcell=False):
+    def __init__(self, wavelength='CuKa',two_theta_range=(10, 90),show_unitcell=False,cal_extinction = True):
         """
         Args:
             wavelength: The wavelength can be specified as either a
@@ -32,6 +33,7 @@ class profile:
         else:
             raise TypeError("'wavelength' must be either of: float, int or str")
         self.two_theta_range = two_theta_range
+        self.cal_extinction = cal_extinction
         self.show_unitcell = show_unitcell
 
     def generate(self, filepath ,latt = None, Asymmetric_atomic_coordinates = None,):
@@ -78,10 +80,11 @@ class profile:
 
         grid, d_list = Diffraction_index(system,latt,self.wavelength,self.two_theta_range)
         print('retrieval of all reciprocal vectors satisfying the diffraction geometry is done')
-      
-        res_HKL, ex_HKL, d_res_HKL, d_ex_HKL = cal_extinction(Point_group, grid,d_list,system,AtomCoordinates,self.wavelength)
+
+        res_HKL, ex_HKL, d_res_HKL, d_ex_HKL = cal_extinction(Point_group, grid,d_list,system,AtomCoordinates,self.wavelength,self.cal_extinction)
         print('extinction peaks are distinguished')
         print('There are {} extinction peaks'.format(len(d_ex_HKL)) )
+       
 
         difc_peak = pd.DataFrame(res_HKL,columns=['H','K','L'])
         difc_peak['Distance'] = d_res_HKL
@@ -118,7 +121,7 @@ def read_cif(cif_dir):
         try:
             a = getFloat(v['_cell_length_a'])
             b = getFloat(v['_cell_length_b'])
-            c = getFloat(v['_cell_length_c'])
+            c = getFloat(v['_cell_length_c']) 
             alpha = getFloat(v['_cell_angle_alpha'])
             beta = getFloat(v['_cell_angle_beta'])
             gamma = getFloat(v['_cell_angle_gamma'])
@@ -127,25 +130,31 @@ def read_cif(cif_dir):
         try:
             space_group_code = int(v['_symmetry_Int_Tables_number'])
             sites = [space_group_code]
+        except KeyError:
             try:
+                space_group_code = int(v['_space_group_IT_number'])
+                sites = [space_group_code]
                 for i, name in enumerate(v['_atom_site_type_symbol']):
                     sites.append([name, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
-            except: sites = None
+            except:
+                sites = None
         except:
             space_group_code = None
             sites = None
         try:
             symmetric_operation = list(v['_space_group_symop_operation_xyz'])
-        except:
-            symmetric_operation = None
-        
+        except KeyError:
+            try:
+                symmetric_operation = list(v['_symmetry_equiv_pos_as_xyz'])
+            except KeyError:
+                symmetric_operation = None
 
-        if '_symmetry_space_group_name_Hall' in v:
-            symbol = v['_symmetry_space_group_name_Hall'][0]
-            spaceG = v['_symmetry_space_group_name_Hall']
-        elif '_symmetry_space_group_name_H-M' in v:
+        if '_symmetry_space_group_name_H-M' in v:
             symbol = v['_symmetry_space_group_name_H-M'][0]
             spaceG = v['_symmetry_space_group_name_H-M']
+        elif '_symmetry_space_group_name_Hall' in v:
+            symbol = v['_symmetry_space_group_name_Hall'][0]
+            spaceG = v['_symmetry_space_group_name_Hall']
         else:
             symbol = None
             spaceG = None
@@ -210,8 +219,10 @@ def Diffraction_index(system,latt,cal_wavelength,two_theta_range):
     Calculation of Diffraction Peak Positions by Diffraction Geometry
     (S-S') = G*, where G* is the reciprocal lattice vector
     """
-    hh, kk, ll = np.mgrid[0:21:1, 0:21:1,0:21:1]
-    grid = np.c_[hh.ravel(), kk.ravel(),ll.ravel()]
+
+    grid = grid_atom()
+    index_of_origin = np.where((grid[:, 0] == 0) & (grid[:, 1] == 0) & (grid[:, 2] == 0))[0][0]
+    grid[[0, index_of_origin]] = grid[[index_of_origin, 0]]
     d_f = BraggLawDerivation().d_spcing(system)
     sym_h, sym_k, sym_l, sym_a, sym_b, sym_c, angle1, angle2, angle3 = \
             symbols('sym_h sym_k sym_l sym_a sym_b sym_c angle1 angle2 angle3')
@@ -348,33 +359,35 @@ def UnitCellAtom(Asymmetric_atomic_coordinates,symmetric_operation):
 
 # def fun for calculating extinction
 # del the peak extincted
-def cal_extinction(Point_group,HKL_list,dis_list,system,AtomCoordinates,wavelength):
-    HKL_list = np.array(HKL_list).tolist()
-    # Diffraction crystal plat
-    res_HKL = []
-    # interplanar spacing
-    d_res_HKL = []
+def cal_extinction(Point_group,HKL_list,dis_list,system,AtomCoordinates,wavelength,cal_extinction=True):
+    if cal_extinction == False:
+        return HKL_list,[],dis_list,[]
+    else:
+        HKL_list = np.array(HKL_list).tolist()
+        # Diffraction crystal plat
+        res_HKL = []
+        # interplanar spacing
+        d_res_HKL = []
 
-    # extinction crystal plat
-    ex_HKL = []
-    # interplanar spacing
-    d_ex_HKL = []
-    for angle in range(len(HKL_list)):
-        two_theta = 2 * np.arcsin(wavelength /2/dis_list[angle]) * 180 / np.pi
-        l_extinction = lattice_extinction(Point_group,HKL_list[angle],system)
-        if l_extinction == True:
-            ex_HKL.append(HKL_list[angle])
-            d_ex_HKL.append(dis_list[angle])
-        else:
-            s_extinction = structure_extinction(AtomCoordinates,HKL_list[angle],two_theta,wavelength)
-            if s_extinction == True:
+        # extinction crystal plat
+        ex_HKL = []
+        # interplanar spacing
+        d_ex_HKL = []
+        for angle in range(len(HKL_list)):
+            two_theta = 2 * np.arcsin(wavelength /2/dis_list[angle]) * 180 / np.pi
+            l_extinction = lattice_extinction(Point_group,HKL_list[angle],system)
+            if l_extinction == True:
                 ex_HKL.append(HKL_list[angle])
                 d_ex_HKL.append(dis_list[angle])
             else:
-                res_HKL.append(HKL_list[angle])
-                d_res_HKL.append(dis_list[angle])
-   
-    return res_HKL, ex_HKL, d_res_HKL, d_ex_HKL
+                s_extinction = structure_extinction(AtomCoordinates,HKL_list[angle],two_theta,wavelength)
+                if s_extinction == True:
+                    ex_HKL.append(HKL_list[angle])
+                    d_ex_HKL.append(dis_list[angle])
+                else:
+                    res_HKL.append(HKL_list[angle])
+                    d_res_HKL.append(dis_list[angle])
+        return res_HKL, ex_HKL, d_res_HKL, d_ex_HKL
 
 def lattice_extinction(lattice_type,HKL,system):
     extinction = False
@@ -382,22 +395,25 @@ def lattice_extinction(lattice_type,HKL,system):
     if lattice_type == 'P' or lattice_type == 'R':
         pass
     elif lattice_type == 'I': # body center
-        if (HKL[0]+HKL[1]+HKL[2]) % 2 == 1:
+        if abs((HKL[0]+HKL[1]+HKL[2])) % 2 == 1:
             extinction = True
         else: pass
     elif lattice_type == 'C': # bottom center
         if system == 1 or system == 5: 
-            if ((HKL[0]+HKL[1]) % 2 == 1) or ((HKL[1]+HKL[2]) % 2 == 1) or ((HKL[0]+HKL[2]) % 2 == 1): 
+            if abs((HKL[0]+HKL[1])) % 2 == 1 or abs((HKL[1]+HKL[2])) % 2 == 1 or abs((HKL[0]+HKL[2])) % 2 == 1: 
                 extinction = True
             else: pass
         else:
-            if (HKL[0]+HKL[1]) % 2 == 1: 
+            if abs((HKL[0]+HKL[1])) % 2 == 1: 
                 extinction = True
             else: pass
     elif lattice_type == 'F': # face center
-        if (HKL[0] % 2 == 1 and HKL[1] % 2 == 1 and HKL[2] % 2 == 1) or (HKL[0] % 2 == 0 and HKL[1] % 2 == 0 and HKL[2] % 2 == 0):
+        if (abs(HKL[0]) % 2 == 1 and abs(HKL[1]) % 2 == 1 and abs(HKL[2]) % 2 == 1) or (abs(HKL[0]) % 2 == 0 and abs(HKL[1]) % 2 == 0 and abs(HKL[2]) % 2 == 0):
             pass
         else: extinction = True
+    else:
+        print('ERROR : unknown lattice type: %s' % lattice_type)  
+        sys.exit()
     return extinction
 
 def structure_extinction(AtomCoordinates,HKL,two_theta,wavelength):
@@ -659,3 +675,12 @@ def getHeavyatom(s):
     # Define a function called getHeavyatom that takes one parameter: s, a string that contains letters and/or non-letter characters.
     return re.sub(r'[^A-Za-z]+', "", s)
     # Use the re.sub() function to replace all non-letter characters in s with an empty string. Return the modified string.
+
+def grid_atom():
+    hh, kk, ll = np.mgrid[-11:13:1, -11:13:1, -11:13:1]
+    grid = np.c_[hh.ravel(), kk.ravel(), ll.ravel()]
+    sorted_indices = np.argsort(np.linalg.norm(grid, axis=1))
+    grid = grid[sorted_indices]
+    index_of_origin = np.where((grid[:, 0] == 0) & (grid[:, 1] == 0) & (grid[:, 2] == 0))[0][0]
+    grid[[0, index_of_origin]] = grid[[index_of_origin, 0]]
+    return grid

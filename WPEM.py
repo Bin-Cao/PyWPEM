@@ -111,7 +111,8 @@ print('='*100)
 
 def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, two_theta_range = None,structure_factor = None, 
         bta=0.8, bta_threshold = 0.5,limit=0.0005, iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0.5, s_angle=50, 
-        subset_number=9, low_bound=65, up_bound=80, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =3, EXACT = False,Cu_tao = None, Ave_Waves = False,):
+        subset_number=9, low_bound=65, up_bound=80, InitializationEpoch=2, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =3, EXACT = False,
+        Cu_tao = None, Ave_Waves = False,loadParams=False,):
     """
     :param wavelength: list type, The wavelength of diffraction waves
     :param Var: a constant or a array, Statistical variance of background 
@@ -132,11 +133,13 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     :param asy_C, s_angle: Peak Correction Parameters
     :param subset_number (default = 9), low_bound (default = 65), up_bound (default = 80): subset_number peaks
             between low_bound and up_bound are used to calculate the new lattice constants by bragg law
+    :param InitializationEpoch: int, default = 2, at initialization, frozen the peaks location for searching a satisified Model initial parameters.
     :param MODEL: str default = 'REFINEMENT' for lattice constants REFINEMENT; 'ANALYSIS' for components ANALYSIS
     :param Macromolecule : Boolean default = False, for profile fitting of crystals. True for macromolecules
     :param cpu : int default = 4, the number of processors
     :param num : int default = 3, the number of the strongest peaks used in calculating volume fraction
     :param EXACT : Boolean default = False, True for exact calculation of volume fraction by diffraction intensity theory
+    :param loadParams : Boolean default = False, for loading parameters
     :return: An instantiated model
     """
     
@@ -176,10 +179,10 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     
     Inst_WPEM = WPEMsolver(wavelength,  Var,  asy_C,  s_angle,
         subset_number,  low_bound,  up_bound,
-        Lattice_constants,singal,  no_bac_intensity_file,  original_file,
+        Lattice_constants,singal, no_bac_intensity_file,  original_file,
         bacground_file, two_theta_range, initial_peak_file,  bta,  bta_threshold,
         limit,  iter_limit, w_limit, iter_max,  lock_num,  structure_factor,  MODEL,
-        Macromolecule, cpu,  num, EXACT, Cu_tao
+        InitializationEpoch,Macromolecule, cpu,  num, EXACT, Cu_tao,loadParams,
     )
         
     Rp, Rwp, i_ter, flag = Inst_WPEM.cal_output_result()
@@ -299,7 +302,7 @@ def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),Latti
     """
     return XRD_profile(filepath,wavelength,two_theta_range,LatticCs,PeakWidth, CSWPEMout).Simulate()
     
-def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False):
+def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False,cal_extinction=True):
     """
     for a single crystal
     Computes the XRD pattern and save to csv file
@@ -316,10 +319,10 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
     latt: lattice constants : [a, b, c, al1, al2, al3]
     AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
     """
-    return profile(wavelength,two_theta_range,show_unitcell).generate(filepath,latt,AtomCoordinates)
+    return profile(wavelength,two_theta_range,show_unitcell,cal_extinction).generate(filepath,latt,AtomCoordinates)
 
-def SubstitutionalSearch(xrd_pattern, cif_file,random_num=8, wavelength='CuKa',search_cap=50,SolventAtom = None, SoluteAtom= None,max_iter = 100):
-    return BgolearnOpt(xrd_pattern, cif_file, random_num,wavelength,search_cap). Substitutional_SS(SolventAtom, SoluteAtom ,max_iter)
+def SubstitutionalSearch(xrd_pattern, cif_file,random_num=8, wavelength='CuKa',search_cap=50,SolventAtom = None, SoluteAtom= None,max_iter = 100,cal_extinction=True):
+    return BgolearnOpt(xrd_pattern, cif_file, random_num,wavelength,search_cap,cal_extinction). Substitutional_SS(SolventAtom, SoluteAtom ,max_iter)
 
 
 

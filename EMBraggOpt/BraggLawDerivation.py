@@ -3,6 +3,7 @@
 
 from sympy import *
 import copy
+import random
 import numpy as np
 
 class BraggLawDerivation:
@@ -498,50 +499,119 @@ class BraggLawDerivation:
                     derive_term = self.update_derivative(crystal_sys, total_peak_n, h_fit_abc, k_fit_abc, l_fit_abc,
                                                         ini_a, ini_b, ini_c, ini_la1, ini_la2, ini_la3, wavelength,
                                                         mui_fit_abc_list)
+                   
+                    # each time we only update one lattice constant randomly 
+                    random_number = random.randint(0, 3)
+                    if random_number == 0:
+                        a_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc,
+                                                        ini_a - tao, ini_b, ini_c, ini_la1, ini_la2, ini_la3, 1, wavelength,
+                                                        mui_fit_abc_list)
+                        a_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc,
+                                                            ini_a + tao, ini_b, ini_c, ini_la1, ini_la2, ini_la3, 1, wavelength,
+                                                            mui_fit_abc_list)
+                        a_learning_rate = 2 * tao / (a_right_derive - a_lef_derive)
+                        cal_a = ini_a - derive_term[0] * a_learning_rate
+                        if abs(cal_a - ini_a) <=  1e-8:
+                            break
+                        if i_ter >= 400:
+                            break
+                        d_list, _, _ = self.get_d_space(crystal_sys,lattice_h,lattice_k, lattice_l, cal_a, ini_b, ini_c,ini_la1, ini_la2,ini_la3)
+                        mui_fit = self.get_new_mui(d_list,wavelength)
+                        return cal_a, ini_b, ini_c, ini_la1, ini_la2, ini_la3, mui_fit
+                    
+                    elif random_number == 1:
+                        b_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a,
+                                                        ini_b - tao, ini_c, ini_la1, ini_la2, ini_la3, 2, wavelength,
+                                                        mui_fit_abc_list)
+                        b_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a,
+                                                            ini_b + tao, ini_c, ini_la1, ini_la2, ini_la3, 2, wavelength,
+                                                            mui_fit_abc_list)
+                        b_learning_rate = 2 * tao / (b_right_derive - b_lef_derive)
+                        cal_b = ini_b - derive_term[1] * b_learning_rate
+                        if abs(cal_b - ini_b) <=  1e-8:
+                            break
+                        if i_ter >= 400:
+                            break
+                        d_list, _, _ = self.get_d_space(crystal_sys,lattice_h,lattice_k, lattice_l, ini_a, cal_b, ini_c,ini_la1, ini_la2,ini_la3)
+                        mui_fit = self.get_new_mui(d_list,wavelength)
+                        return ini_a, cal_b, ini_c, ini_la1, ini_la2, ini_la3, mui_fit
+                    
+                    elif random_number == 2:
+                        c_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
+                                                        ini_c - tao, ini_la1, ini_la2, ini_la3, 3,wavelength, mui_fit_abc_list)
+                        c_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
+                                                            ini_c + tao, ini_la1, ini_la2, ini_la3, 3, wavelength, mui_fit_abc_list)
+                        c_learning_rate = 2 * tao / (c_right_derive - c_lef_derive)
+                        cal_c = ini_c - derive_term[2] * c_learning_rate
+                        if abs(cal_c - ini_c) <=  1e-8:
+                            break
+                        if i_ter >= 400:
+                            break
+                        d_list, _, _ = self.get_d_space(crystal_sys,lattice_h,lattice_k, lattice_l, ini_a, ini_b, cal_c,ini_la1, ini_la2,ini_la3)
+                        mui_fit = self.get_new_mui(d_list,wavelength)
+                        return ini_a, ini_b, cal_c, ini_la1, ini_la2, ini_la3, mui_fit
+                    
+                    else:
+                        la2_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
+                                                                ini_c, ini_la1, ini_la2 - tao, ini_la3, 5, wavelength, mui_fit_abc_list)
+                        la2_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a,
+                                                                ini_b, ini_c, ini_la1, ini_la2 + tao, ini_la3, 5,wavelength, mui_fit_abc_list) 
+                        la2_learning_rate = 2 * tao / (la2_right_derive - la2_lef_derive)
+                        cal_la2 = ini_la2 - derive_term[3] * la2_learning_rate
+                        if abs(cal_la2 - ini_la2) <=  1e-8:
+                            break
+                        if i_ter >= 400:
+                            break
+                        d_list, _, _ = self.get_d_space(crystal_sys,lattice_h,lattice_k, lattice_l, ini_a, ini_b, ini_c,ini_la1, cal_la2,ini_la3)
+                        mui_fit = self.get_new_mui(d_list,wavelength)
+                        return ini_a, ini_b, ini_c, ini_la1, cal_la2, ini_la3, mui_fit
+                    """
+                    # update simultaneously
                     a_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc,
                                                         ini_a - tao, ini_b, ini_c, ini_la1, ini_la2, ini_la3, 1, wavelength,
+                                                        mui_fit_abc_list)
+                    a_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc,
+                                                        ini_a + tao, ini_b, ini_c, ini_la1, ini_la2, ini_la3, 1, wavelength,
                                                         mui_fit_abc_list)
                     b_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a,
                                                         ini_b - tao, ini_c, ini_la1, ini_la2, ini_la3, 2, wavelength,
                                                         mui_fit_abc_list)
-                    c_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
-                                                        ini_c - tao, ini_la1, ini_la2, ini_la3, 3,wavelength, mui_fit_abc_list)
-                    la2_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
-                                                            ini_c, ini_la1, ini_la2 - tao, ini_la3, 5, wavelength, mui_fit_abc_list)
-
-                    a_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc,
-                                                            ini_a + tao, ini_b, ini_c, ini_la1, ini_la2, ini_la3, 1, wavelength,
-                                                            mui_fit_abc_list)
                     b_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a,
-                                                            ini_b + tao, ini_c, ini_la1, ini_la2, ini_la3, 2, wavelength,
-                                                            mui_fit_abc_list)
+                                                        ini_b + tao, ini_c, ini_la1, ini_la2, ini_la3, 2, wavelength,
+                                                        mui_fit_abc_list)
+                    c_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
+                                                    ini_c - tao, ini_la1, ini_la2, ini_la3, 3,wavelength, mui_fit_abc_list)
                     c_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
-                                                            ini_c + tao, ini_la1, ini_la2, ini_la3, 3, wavelength, mui_fit_abc_list)
+                                                        ini_c + tao, ini_la1, ini_la2, ini_la3, 3, wavelength, mui_fit_abc_list)
+                    la2_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a, ini_b,
+                                                                ini_c, ini_la1, ini_la2 - tao, ini_la3, 5, wavelength, mui_fit_abc_list)
                     la2_right_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a,
-                                                            ini_b, ini_c, ini_la1, ini_la2 + tao, ini_la3, 5,wavelength, mui_fit_abc_list)
+                                                            ini_b, ini_c, ini_la1, ini_la2 + tao, ini_la3, 5,wavelength, mui_fit_abc_list) 
 
                     a_learning_rate = 2 * tao / (a_right_derive - a_lef_derive)
                     b_learning_rate = 2 * tao / (b_right_derive - b_lef_derive)
                     c_learning_rate = 2 * tao / (c_right_derive - c_lef_derive)
                     la2_learning_rate = 2 * tao / (la2_right_derive - la2_lef_derive)
-
+                    
                     cal_a = ini_a - derive_term[0] * a_learning_rate
                     cal_b = ini_b - derive_term[1] * b_learning_rate
                     cal_c = ini_c - derive_term[2] * c_learning_rate
                     cal_la2 = ini_la2 - derive_term[3] * la2_learning_rate
 
                     if abs(cal_a - ini_a) <= 1e-8 and abs(cal_b - ini_b) <= 1e-8 and abs(cal_c - ini_c) <= 1e-8 \
-                            and abs(cal_la2 - ini_la2) <= 1e-8:
+                            and  abs(cal_la2 - ini_la2) <= 1e-8:
                         break
 
-                    if i_ter >= 800:
+                    if i_ter >= 400:
                         break
-                d_list, _, _ = self.get_d_space(crystal_sys,lattice_h,lattice_k, lattice_l, cal_a, cal_b, cal_c,ini_la1, cal_la2,ini_la3)
-                mui_fit = self.get_new_mui(d_list,wavelength)
+                d_list, _, _ = self.get_d_space(crystal_sys, lattice_h, lattice_k,
+                                                              lattice_l, cal_a, cal_b,cal_c, ini_la1, cal_la2, ini_la3)
+                mui_fit = self.get_new_mui(d_list, wavelength)
 
                 return cal_a, cal_b, cal_c, ini_la1, cal_la2, ini_la3, mui_fit
-
+                """
             elif crystal_sys == 7:
+                # original version Sep 19 2023
                 cal_a = copy.deepcopy(ini_a)
                 cal_b = copy.deepcopy(ini_b)
                 cal_c = copy.deepcopy(ini_c)
@@ -625,13 +695,13 @@ class BraggLawDerivation:
                         cal_la3 - ini_la3) <= 1e-8:
                         break
 
-                    if i_ter >= 800:
+                    if i_ter >= 400:
                         break
                 d_list, _, _ = self.get_d_space(crystal_sys, lattice_h, lattice_k,
-                                                              lattice_l, cal_a, cal_b,cal_c, ini_la1, cal_la2, ini_la3)
+                                                              lattice_l, cal_a, cal_b,cal_c, cal_la1, cal_la2, cal_la3)
                 mui_fit = self.get_new_mui(d_list, wavelength)
 
-                return cal_a, cal_b, cal_c, ini_la1, cal_la2, ini_la3, mui_fit
+                return cal_a, cal_b, cal_c, cal_la1, cal_la2, cal_la3, mui_fit
 
             else:
                 return -1

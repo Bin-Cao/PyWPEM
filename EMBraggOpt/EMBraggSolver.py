@@ -2,6 +2,7 @@
 # Author: Bin CAO <binjacobcao@gmail.com>
 
 import copy
+import csv
 from itertools import chain
 import numpy as np
 import pandas as pd
@@ -30,7 +31,8 @@ class WPEMsolver(object):
         self,wavelength,Var,asy_C,s_angle,subset_number, low_bound,up_bound,
         lattice_constants,singal,no_bac_intensity_file,original_file,bacground_file,two_theta_range,
         initial_peak_file,bta, bta_threshold,limit, iter_limit,w_limit,iter_max,
-        lock_num,structure_factor, MODEL, Macromolecule,cpu,num, EXACT,Cu_tao
+        lock_num,structure_factor, MODEL, InitializationEpoch,Macromolecule,cpu,num, EXACT,Cu_tao,
+        loadParams,
 
     ):
         self.wavelength = wavelength # wavelength
@@ -56,12 +58,14 @@ class WPEMsolver(object):
         self.lock_num = lock_num # in case of loglikelihood iterations continously decrease 
         self.structure_factor = structure_factor # structure factor
         self.MODEL = MODEL # str default = 'REFINEMENT' for lattice constants REFINEMENT; 'ANALYSIS' for components ANALYSIS
+        self.IniEpoch = InitializationEpoch # Initialization epoch
         self.Macromolecule = Macromolecule # Boolean default = False, for profile fitting of crystals. True for macromolecules.
         self.cpu = cpu # parallel computatis CPU core numerus
         self.num = num # the number of the strongest peaks used in calculating volume fraction
         self.EXACT = EXACT # Boolean default = False, True for exact calculation of volume fraction by diffraction intensity theory
         self.Cu_tao = Cu_tao # for limitting the relationship between the ray diffraction intensities of copper Ka1 and Ka2
-        
+        self.loadParams = loadParams # if read in the initial parameters
+
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
         plt.rcParams['font.size'] = 12
@@ -136,6 +140,13 @@ class WPEMsolver(object):
             # Update parameters via EM-Bragg process
             w_list, p1_list, p2_list, i_ter, flag, \
             ini_CL, mui_abc_set, i_out, bac_up, Rp, Rwp, Rsquare,crystal_sys_set = self.up_parameter(hkl_data,theta_data, inten, area, min_i, i_obser, bac,lmd)
+
+            csv_file = "./WPEMFittingResults/modelparams.csv"
+            with open(csv_file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(w_list)
+                writer.writerow(p1_list)
+                writer.writerow(p2_list)
 
             i_calc = i_out + min_i
 
@@ -280,44 +291,9 @@ class WPEMsolver(object):
                 peakdata = pd.read_csv('peak{task}.csv'.format(task=task))
                 Mult = np.array(peakdata.Mult)
                 
-
-                with open(os.path.join('WPEMFittingResults','CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
-                                           Task=task, year=namey, month=nameM, day=named, hour=nameh,minute=namem)), 'w') as wfid:
-                    print('code', end=',', file=wfid)
-                    print('H', end=',', file=wfid)
-                    print('K', end=',', file=wfid)
-                    print('L', end=',', file=wfid)
-                    print('Mult', end=',', file=wfid)
-                    print('wi', end=',', file=wfid)
-                    print('Ai', end=',', file=wfid)
-                    print('mu_i', end=',', file=wfid)
-                    print('intensity', end=',', file=wfid)
-                    print('L_gamma_i', end=',', file=wfid)
-                    print('G_sigma2_i', end=',', file=wfid)
-                    print("a=%f" % ini_CL[task][0], end=',', file=wfid)
-                    print("b=%f" % ini_CL[task][1], end=',', file=wfid)
-                    print("c=%f" % ini_CL[task][2], end=',', file=wfid)
-                    print('alpha=%f' % ini_CL[task][3], end=',', file=wfid)
-                    print('beta=%f' % ini_CL[task][4], end=',', file=wfid)
-                    print('gamma=%f' % ini_CL[task][5], file=wfid)
-                    for j in range(len(mui_abc_set[task])):
-                        t = int(j / 2)
-                        print((j % 2)*(len(self.wavelength)-1), end=',', file=wfid)
-                        print(hkl_data[task][0][t], end=',', file=wfid)
-                        print(hkl_data[task][1][t], end=',', file=wfid)
-                        print(hkl_data[task][2] [t], end=',', file=wfid)
-                        print(Mult[t], end=',', file=wfid)
-                        print(w_list_match[j], end=',', file=wfid)
-                        print(a_list_match[j], end=',', file=wfid)
-                        print(mui_abc_set[task][j], end=',', file=wfid)
-                        print(task_intensity[j], end=',', file=wfid)
-                        print(gam_list_match[j], end=',', file=wfid)
-                        print(sig_list_match[j], file=wfid)
-
-                if len(self.Lattice_constants) != 1:
-                    # rewrite for Decomposing
-                    with open(os.path.join('DecomposedComponents',
-                                           'System{Task}.csv'.format(Task=task)), 'w') as wfid:
+                if len(self.wavelength) == 2:
+                    with open(os.path.join('WPEMFittingResults','CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
+                                            Task=task, year=namey, month=nameM, day=named, hour=nameh,minute=namem)), 'w') as wfid:
                         print('code', end=',', file=wfid)
                         print('H', end=',', file=wfid)
                         print('K', end=',', file=wfid)
@@ -340,7 +316,7 @@ class WPEMsolver(object):
                             print((j % 2)*(len(self.wavelength)-1), end=',', file=wfid)
                             print(hkl_data[task][0][t], end=',', file=wfid)
                             print(hkl_data[task][1][t], end=',', file=wfid)
-                            print(hkl_data[task][2][t], end=',', file=wfid)
+                            print(hkl_data[task][2] [t], end=',', file=wfid)
                             print(Mult[t], end=',', file=wfid)
                             print(w_list_match[j], end=',', file=wfid)
                             print(a_list_match[j], end=',', file=wfid)
@@ -348,6 +324,104 @@ class WPEMsolver(object):
                             print(task_intensity[j], end=',', file=wfid)
                             print(gam_list_match[j], end=',', file=wfid)
                             print(sig_list_match[j], file=wfid)
+
+                    if len(self.Lattice_constants) != 1:
+                        # rewrite for Decomposing
+                        with open(os.path.join('DecomposedComponents',
+                                            'System{Task}.csv'.format(Task=task)), 'w') as wfid:
+                            print('code', end=',', file=wfid)
+                            print('H', end=',', file=wfid)
+                            print('K', end=',', file=wfid)
+                            print('L', end=',', file=wfid)
+                            print('Mult', end=',', file=wfid)
+                            print('wi', end=',', file=wfid)
+                            print('Ai', end=',', file=wfid)
+                            print('mu_i', end=',', file=wfid)
+                            print('intensity', end=',', file=wfid)
+                            print('L_gamma_i', end=',', file=wfid)
+                            print('G_sigma2_i', end=',', file=wfid)
+                            print("a=%f" % ini_CL[task][0], end=',', file=wfid)
+                            print("b=%f" % ini_CL[task][1], end=',', file=wfid)
+                            print("c=%f" % ini_CL[task][2], end=',', file=wfid)
+                            print('alpha=%f' % ini_CL[task][3], end=',', file=wfid)
+                            print('beta=%f' % ini_CL[task][4], end=',', file=wfid)
+                            print('gamma=%f' % ini_CL[task][5], file=wfid)
+                            for j in range(len(mui_abc_set[task])):
+                                t = int(j / 2)
+                                print((j % 2)*(len(self.wavelength)-1), end=',', file=wfid)
+                                print(hkl_data[task][0][t], end=',', file=wfid)
+                                print(hkl_data[task][1][t], end=',', file=wfid)
+                                print(hkl_data[task][2][t], end=',', file=wfid)
+                                print(Mult[t], end=',', file=wfid)
+                                print(w_list_match[j], end=',', file=wfid)
+                                print(a_list_match[j], end=',', file=wfid)
+                                print(mui_abc_set[task][j], end=',', file=wfid)
+                                print(task_intensity[j], end=',', file=wfid)
+                                print(gam_list_match[j], end=',', file=wfid)
+                                print(sig_list_match[j], file=wfid)
+                # for single X-ray
+                if len(self.wavelength) == 1:
+                    with open(os.path.join('WPEMFittingResults','CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
+                                            Task=task, year=namey, month=nameM, day=named, hour=nameh,minute=namem)), 'w') as wfid:
+                        print('H', end=',', file=wfid)
+                        print('K', end=',', file=wfid)
+                        print('L', end=',', file=wfid)
+                        print('Mult', end=',', file=wfid)
+                        print('wi', end=',', file=wfid)
+                        print('Ai', end=',', file=wfid)
+                        print('mu_i', end=',', file=wfid)
+                        print('intensity', end=',', file=wfid)
+                        print('L_gamma_i', end=',', file=wfid)
+                        print('G_sigma2_i', end=',', file=wfid)
+                        print("a=%f" % ini_CL[task][0], end=',', file=wfid)
+                        print("b=%f" % ini_CL[task][1], end=',', file=wfid)
+                        print("c=%f" % ini_CL[task][2], end=',', file=wfid)
+                        print('alpha=%f' % ini_CL[task][3], end=',', file=wfid)
+                        print('beta=%f' % ini_CL[task][4], end=',', file=wfid)
+                        print('gamma=%f' % ini_CL[task][5], file=wfid)
+                        for j in range(len(mui_abc_set[task])):
+                            print(hkl_data[task][0][j], end=',', file=wfid)
+                            print(hkl_data[task][1][j], end=',', file=wfid)
+                            print(hkl_data[task][2] [j], end=',', file=wfid)
+                            print(Mult[j], end=',', file=wfid)
+                            print(w_list_match[j], end=',', file=wfid)
+                            print(a_list_match[j], end=',', file=wfid)
+                            print(mui_abc_set[task][j], end=',', file=wfid)
+                            print(task_intensity[j], end=',', file=wfid)
+                            print(gam_list_match[j], end=',', file=wfid)
+                            print(sig_list_match[j], file=wfid)
+
+                    if len(self.Lattice_constants) != 1:
+                        # rewrite for Decomposing
+                        with open(os.path.join('DecomposedComponents',
+                                            'System{Task}.csv'.format(Task=task)), 'w') as wfid:
+                            print('H', end=',', file=wfid)
+                            print('K', end=',', file=wfid)
+                            print('L', end=',', file=wfid)
+                            print('Mult', end=',', file=wfid)
+                            print('wi', end=',', file=wfid)
+                            print('Ai', end=',', file=wfid)
+                            print('mu_i', end=',', file=wfid)
+                            print('intensity', end=',', file=wfid)
+                            print('L_gamma_i', end=',', file=wfid)
+                            print('G_sigma2_i', end=',', file=wfid)
+                            print("a=%f" % ini_CL[task][0], end=',', file=wfid)
+                            print("b=%f" % ini_CL[task][1], end=',', file=wfid)
+                            print("c=%f" % ini_CL[task][2], end=',', file=wfid)
+                            print('alpha=%f' % ini_CL[task][3], end=',', file=wfid)
+                            print('beta=%f' % ini_CL[task][4], end=',', file=wfid)
+                            print('gamma=%f' % ini_CL[task][5], file=wfid)
+                            for j in range(len(mui_abc_set[task])):
+                                print(hkl_data[task][0][j], end=',', file=wfid)
+                                print(hkl_data[task][1][j], end=',', file=wfid)
+                                print(hkl_data[task][2][j], end=',', file=wfid)
+                                print(Mult[j], end=',', file=wfid)
+                                print(w_list_match[j], end=',', file=wfid)
+                                print(a_list_match[j], end=',', file=wfid)
+                                print(mui_abc_set[task][j], end=',', file=wfid)
+                                print(task_intensity[j], end=',', file=wfid)
+                                print(gam_list_match[j], end=',', file=wfid)
+                                print(sig_list_match[j], file=wfid)
 
             if self.EXACT == False:
                 VFD.Volome_Fraction_Cal(crystal_sys_set,self.num, EXACT=False)
@@ -397,14 +471,19 @@ class WPEMsolver(object):
                   ', Which is lower than the angle corresponding to max(H,K,L) : ',np.array(ini_p).max())
             print('Imported HKL file has errors')
             raise NameError('NOTE! H K L matching error')
-
-        # Initialize the parameters
-        if len(self.wavelength) == 1:
-            ini_w_list, ini_p1_list, ini_p2_list = self.initial_p_single(ini_p, area,two_theta,intensity)
-        elif len(self.wavelength) == 2:
-            ini_w_list, ini_p1_list, ini_p2_list = self.initial_p(ini_p, area,two_theta,intensity)
+        
+        if self.loadParams == True:
+            ini_w_list, ini_p1_list, ini_p2_list = readfile("./WPEMFittingResults/modelparams.csv")
+            print('—————————— Loaded parameters successfully ——————————')
         else:
-            print('Your input wavelength number is unsupported in current version of  WPEM')
+            # Initialize the parameters
+            print('—————————— Initilize the parameters by WPEM ——————————')
+            if len(self.wavelength) == 1:
+                ini_w_list, ini_p1_list, ini_p2_list = self.initial_p_single(ini_p, area,two_theta,intensity)
+            elif len(self.wavelength) == 2:
+                ini_w_list, ini_p1_list, ini_p2_list = self.initial_p(ini_p, area,two_theta,intensity)
+            else:
+                print('Your input wavelength number is unsupported in current version of WPEM')
         print('Parameter initialization has been completed \n')
 
         # total number of peaks
@@ -484,7 +563,7 @@ class WPEMsolver(object):
             pool = ProcessPoolExecutor(self.cpu)
             outlist = []
             for task in range(multitasks):
-                out = pool.submit(self.BraggIteration, __new_mu_set, mui_abc_set, ini_LC, hkl_data, crystal_sys_set, task,)
+                out = pool.submit(self.BraggIteration, __new_mu_set, mui_abc_set, ini_LC, hkl_data, crystal_sys_set, task,i_ter)
                 outlist.append(out.result())
             pool.shutdown(True)
 
@@ -498,6 +577,7 @@ class WPEMsolver(object):
                 for j in range(len(mui_abc_set[task])):
                     mui_abc.append(mui_abc_set[task][j])
                 # mui_abc is the renew p1_list
+
             print("WPEM %s-th iteration" % i_ter)
             print(ini_LC)
 
@@ -905,7 +985,8 @@ class WPEMsolver(object):
 
         return w_list, p1_list, p2_list
     
-    def BraggIteration(self, new_mu_set, mui_abc_set, ini_LC, hkl_data, crystal_sys_set,task):
+    def BraggIteration(self, new_mu_set, mui_abc_set, ini_LC, hkl_data, crystal_sys_set,task,i_ter):
+        
         """
         This function defines the Bragg-step in EM_Bragg Solver
         For a single crystal system
@@ -926,13 +1007,19 @@ class WPEMsolver(object):
         lattice_h = hkl_data[task][0]
         lattice_k = hkl_data[task][1]
         lattice_l = hkl_data[task][2]
-
         # check if lattice constant changes are allowed
         if self.singal[task] == 0:
             fixed = False
         elif self.singal[task] == 1:
             fixed = True
 
+
+        if type(self.IniEpoch) != int:
+            print('type error, InitializationEpoch must be an integer')
+        elif self.IniEpoch >= i_ter:
+            return ini_LC, new_mu_set, new_mu_set
+        else: pass
+        
         # associate the peak's locations by Bragg law
         lattice_a, lattice_b, lattice_c, lattice_ang1, lattice_ang2, lattice_ang3, mui_abc_part = BLD.OptmialLatticeConstant(
             crystal_sys_set[task], mui_abc_set[task], mui_cal_em_match,self.subset_number,self.low_bound, self.up_bound, 
@@ -1021,4 +1108,13 @@ def read_ini_peak(data_file, Num):
                     print(float(k_all[j]), end=',', file=wfid)
                     print(float(l_all[j]), file=wfid)
         print('Diffraction indexs have been obtained by WPEM')
+
+def readfile(loadParams):
+    # readin the initial parameters from file
+    with open(loadParams, 'r') as file:
+        reader = csv.reader(file)
+        w_read = [float(item) for item in next(reader)]
+        p1_read = [float(item) for item in next(reader)]
+        p2_read = [float(item) for item in next(reader)]
+    return w_read, p1_read, p2_read
 ################################################################

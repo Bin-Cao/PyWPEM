@@ -1,5 +1,6 @@
 # Atom Information Searching for a sigle crystal 
 # Author: Bin CAO <binjacobcao@gmail.com>
+
 import re
 import os
 import random
@@ -14,7 +15,7 @@ from ..Plot.UnitCell import plotUnitCell
 from ..XRDSimulation.Simulation import det_system,cal_atoms,symbols,LatticVolume,WAVELENGTHS
 
 class BgolearnOpt(object):
-    def __init__(self, xrd_pattern, cif_file,random_num, wavelength='CuKa',search_cap = 100) :
+    def __init__(self, xrd_pattern, cif_file,random_num, wavelength='CuKa',search_cap = 100,cal_extinction=True) :
         # xrd_pattern : the path of experimental xrd diffraction pattern of a signal crystal (2theta, intensity)
         # cif_file : the path of the cif file
         # WPEM reads lattice constants from an input cif file 
@@ -40,8 +41,8 @@ class BgolearnOpt(object):
         matches = re.findall(r'(\d+\.\d+)', ','.join(first_row)) 
         LatticCs = [float(match) for match in matches] 
         if type(wavelength) == list:
-            _, Atom_coordinate = profile(wavelength[0],).generate(cif_file)
-        else:_, Atom_coordinate = profile(wavelength,).generate(cif_file)
+            _, Atom_coordinate = profile(wavelength=wavelength[0],cal_extinction=cal_extinction).generate(cif_file)
+        else:_, Atom_coordinate = profile(wavelength=wavelength,cal_extinction=cal_extinction).generate(cif_file)
 
         self.LatticCs = LatticCs
         self.crystal_system = det_system(LatticCs)
@@ -108,12 +109,13 @@ class BgolearnOpt(object):
         response_vector.append(score)
         print('initial error is', score)
 
-        save_resource = False
+        
         if self.random_num >= max_iter: 
             print('WPEM uses a random optimization method based on the current settings')
             save_resource = True
         else: 
             print('\n')
+            save_resource = False
             import Bgolearn.BGOsampling as BGOS
             search_space = generate_sp(self.Atom_coordinate,SolventAtom,SoluteAtom,feature_names,self.search_cap)
             print('\n')
@@ -151,21 +153,35 @@ class BgolearnOpt(object):
                                 * (1 + np.cos(self.mu_list[angle] * np.pi/180) ** 2) / (np.sin(self.mu_list[angle] / 2 * np.pi/180) **2 * np.cos(self.mu_list[angle] / 2 * np.pi/180))))
                 del FHKL_square 
                 score = mark_fun(Ints,self.intensity,'mse')
+                """
+                save_resource == True
+                The sits are searched in a random way, in which I only save the better structures
+                save_resource == False
+                The sits are searched by Bgolearn, I saves all the structures for providing a larger training dataset to Bgolearn
+                """
                 if save_resource == True:
                     # this structure is better than the last one
                     if score <= response_vector[-1]:
                         response_vector.append(score)
                         Intensity_list.append(Ints)
-                    else: # don't save the information of worse structure : response_vector,  Intensity_list
+                    else: 
+                        # don't save the information of worse structure : response_vector,  Intensity_list
                         # Delete the stored structure information, the structure is not a satisfactory structure
                         feature_matrix.pop()
+                        print('feature_matrix',feature_matrix)
+                else: response_vector.append(score)
+                
             else:
                 print('WPEM Site optimization | {}-th | Bgolearn '.format(iter+1))
                 Bgolearn = BGOS.Bgolearn() 
-                Mymodel = Bgolearn.fit(data_matrix = feature_matrix, Measured_response = response_vector, virtual_samples = search_space)
+                Mymodel = Bgolearn.fit(data_matrix = np.array(feature_matrix), Measured_response = response_vector, virtual_samples = np.array(search_space))
                 _, data = Mymodel.EI()
+                print('\n')
                 feature_matrix.append(data[0])
                 search_space.remove(data[0].tolist())
+                if len(search_space) == 0:
+                    print("All potential structures were compared by Bgolearn !")
+                    break
 
                 new_Atom_coordinate = label_decode(data[0].tolist(),feature_names)
                 # for one hot: 
@@ -332,7 +348,9 @@ def generate_sp(Atom_coordinat,SolventAtom,SoluteAtom,feature_names,search_cap):
         for rep in combination:
             backup[rep][0] = SoluteAtom
         new_feature = label_encode(backup,feature_names)
-        search_spaces.append(new_feature.tolist())
+        try: list_format = new_feature.tolist()
+        except: list_format = new_feature
+        search_spaces.append(list_format)
 
     return search_spaces
         
