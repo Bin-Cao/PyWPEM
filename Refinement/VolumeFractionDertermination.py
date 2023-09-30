@@ -121,7 +121,7 @@ class VandMFraction:
         This function calculates the volume fraction through the structure factor
         Calculate by selecting the strongest peaks, num is the number of peaks
         if EXACT == False:
-        Only consider the effect of Polarization factor and Lorentz factor on the intensity of diffraction peaks, Not recommended
+        Only consider the effect of Polarization factor and Lorentz factor on the intensity of diffraction peaks
         if EXACT == False:
         Consider the effect of structure factor
         """

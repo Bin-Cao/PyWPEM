@@ -129,18 +129,23 @@ def read_cif(cif_dir):
         except: latt = None
         try:
             space_group_code = int(v['_symmetry_Int_Tables_number'])
-            sites = [space_group_code]
         except KeyError:
             try:
                 space_group_code = int(v['_space_group_IT_number'])
-                sites = [space_group_code]
-                for i, name in enumerate(v['_atom_site_type_symbol']):
+            except:
+                space_group_code = -1
+
+        sites =[space_group_code]
+        try:
+            for i, name in enumerate(v['_atom_site_type_symbol']):
+                sites.append([name, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
+        except KeyError:
+            try:
+                for i, name in enumerate(v['_atom_site_label']):
                     sites.append([name, getFloat(v['_atom_site_fract_x'][i]), getFloat(v['_atom_site_fract_y'][i]), getFloat(v['_atom_site_fract_z'][i])])
             except:
                 sites = None
-        except:
-            space_group_code = None
-            sites = None
+       
         try:
             symmetric_operation = list(v['_space_group_symop_operation_xyz'])
         except KeyError:
@@ -270,15 +275,15 @@ def unit_cell_range(ori_atom):
         z_ = ori_atom[atom][3]
 
         if x_ < 0 : x_ += 1 
-        elif x_ > 1 : x_ -= 1
+        elif x_ >= 1 : x_ -= 1
         else : pass 
 
         if y_ < 0 : y_ += 1 
-        elif y_ > 1 : y_ -= 1
+        elif y_ >= 1 : y_ -= 1
         else : pass
 
         if z_ < 0 : z_ += 1 
-        elif z_ > 1 : z_ -= 1
+        elif z_ >= 1 : z_ -= 1
         else : pass
 
         x_ = get_float(x_,3)
