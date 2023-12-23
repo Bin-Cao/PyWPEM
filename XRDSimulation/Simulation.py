@@ -8,32 +8,63 @@ import matplotlib.pyplot as plt
 import csv
 import os
 import re
+import random
+import math
+from scipy.special import wofz
 from ..Extinction.XRDpre import profile
 from .DiffractionGrometry.atom import atomics
 from ..EMBraggOpt.WPEMFuns.SolverFuns import theta_intensity_area
         
 class XRD_profile(object):
-    def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01), LatticCs = None,PeakWidth=False, CSWPEMout = None):
-        # filepath : the path of the cif file
-        # CSWPEMout : Crystal System WPEMout file
-        # PeakWidth=False, The peak width of the simulated peak is 0
-        # PeakWidth=True, The peak width of the simulated peak is set to the peak obtained by WPEM
-        # LatticCs : the lattic constants after WPEM refinement, default = None, if None,
-        # WPEM reads lattice constants from an input cif file 
-        # read parameters from cif by ..Extinction.XRDpre
-        _range = (two_theta_range[0],two_theta_range[1])
-        if LatticCs == None:
-            LatticCs, Atom_coordinate = profile(wavelength,_range).generate(filepath)
-        elif type(LatticCs) == list and len(LatticCs) == 6 : 
-            _, Atom_coordinate = profile(wavelength,_range).generate(filepath)
-        else : print('Type Error of Param LatticCs')
-        print('\n')
-        self.LatticCs = LatticCs
-        self.two_theta_range = two_theta_range 
+    def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),SuperCell=False,PeriodicArr=[3,3,3],ReSolidSolution = None, RSSratio=0.1,  GrainSize = None, LatticCs = None,PeakWidth=True, CSWPEMout = None):
+        """
+        # filepath: The path of the CIF file
+        
+        # GrainSize: The default value is 'none,' or you can input a float representing the grain size within a range of 5-30 nanometers.
 
+        # CSWPEMout: Crystal System WPEMout file
+
+        # PeakWidth=False: The peak width of the simulated peak is set to 0.
+
+        # PeakWidth=True: The peak width of the simulated peak is set to the peak obtained by WPEM.
+
+        # LatticCs: The lattice constants after WPEM refinement. The default is None. If set to None, WPEM reads lattice constants from an input CIF file. Read parameters from CIF by using ..Extinction.XRDpre.
+
+        """
+        self.ReSolidSolution = ReSolidSolution
+        self.RSSratio = RSSratio
+        if type(ReSolidSolution) == list:
+            _range = (two_theta_range[0],two_theta_range[1])
+            if LatticCs == None:
+                LatticCs, Atom_coordinate,_ = profile(wavelength,_range,cal_extinction = False).generate(filepath)
+            elif type(LatticCs) == list and len(LatticCs) == 6 : 
+                _, Atom_coordinate = profile(wavelength,_range,cal_extinction = False).generate(filepath)
+            else : print('Type Error of Param LatticCs')
+        else:
+            _range = (two_theta_range[0],two_theta_range[1])
+            if LatticCs == None:
+                LatticCs, Atom_coordinate,_ = profile(wavelength,_range).generate(filepath)
+            elif type(LatticCs) == list and len(LatticCs) == 6 : 
+                _, Atom_coordinate = profile(wavelength,_range).generate(filepath)
+            else : print('Type Error of Param LatticCs')
+        print('\n')
+
+        self.two_theta_range = two_theta_range 
+        self.filepath = filepath
         self.crystal_system = det_system(LatticCs)
-        self.Atom_coordinate = Atom_coordinate   
-        #  i.e., [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] 
+       
+        self.PeriodicArr = PeriodicArr
+        if SuperCell:
+            print('-----SuperCell is cofigured-----')
+            self.Atom_coordinate = generate_super_cell(Atom_coordinate,PeriodicArr[0],PeriodicArr[1],PeriodicArr[2])
+            a = LatticCs[0] * PeriodicArr[0]
+            b = LatticCs[1] * PeriodicArr[1]
+            c = LatticCs[2] * PeriodicArr[2]
+            self.LatticCs = [a,b,c,LatticCs[3],LatticCs[4],LatticCs[5]]
+        else :
+            self.LatticCs = LatticCs
+            self.Atom_coordinate = Atom_coordinate   
+            #  i.e., [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....] 
 
         if isinstance(wavelength, (float, int)):
             self.wavelength = wavelength
@@ -52,8 +83,23 @@ class XRD_profile(object):
             print('Initilized witout peak\'s shape')
         elif PeakWidth==True:
             if type(CSWPEMout) != str:
-                print('Please provide the decomposed peak parameters of WPEM')
+                print('WPEM simulates the peaks as the default Voigt functions')
+                peak = pd.read_csv('./output_xrd/{}HKL.csv'.format(filepath[-11:-4]))
+                self.mu_list = peak['2theta/TOF'].tolist()
+                self.Mult = peak['Mult'].tolist()
+                self.HKL_list = np.array(peak[['H','K','L']]).tolist()
+                if GrainSize is not None:
+                    Γ = 0.888*self.wavelength/(GrainSize*np.cos(np.radians(np.array(self.mu_list)/2)))
+                    self.gamma_list = Γ / 2 + 1e-10
+                    self.sigma2_list = Γ**2 / (8*np.sqrt(2)) + 1e-10
+                else:
+                    self.gamma_list = 0.1 * np.ones(len(self.mu_list))
+                    self.sigma2_list = np.zeros(len(self.mu_list))
+                print('Initilized with default peak\'s shape')
+
             else:
+                # readin the refined parameters
+                print('WPEM simulates the peaks by the decomposed peak shapes')
                 peak = pd.read_csv('./output_xrd/{}HKL.csv'.format(filepath[-11:-4]))
                 data = pd.read_csv(CSWPEMout)
                 self.mu_list = data['mu_i'].tolist() 
@@ -61,26 +107,61 @@ class XRD_profile(object):
                 self.sigma2_list = data['G_sigma2_i'].tolist()
                 self.Mult = peak['Mult'].tolist()
                 self.HKL_list = np.array(peak[['H','K','L']]).tolist()
-                print('Initilized with peak\'s shape')
+                print('Initilized with decomposed peak\'s shape')
+
         self.PeakWidth = PeakWidth
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
         plt.rcParams['font.size'] = 12
         os.makedirs('Simulation_WPEM', exist_ok=True)
 
-    def Simulate(self,plot=True, write_in = True):
-        FHKL_square = [] # [FHKL2_1, FHKL2_2,...] a list has the same length with HKL_list
-        for angle in range(len(self.HKL_list)):
-            FHKL_square_left = 0
-            FHKL_square_right = 0
-            for atom in range(len(self.Atom_coordinate)):
-                fi = cal_atoms(self.Atom_coordinate[atom][0],self.mu_list[angle], self.wavelength)
-                FHKL_square_left += fi * np.cos(2 * np.pi * (self.Atom_coordinate[atom][1] * self.HKL_list[angle][0] +
-                                                    self.Atom_coordinate[atom][2] * self.HKL_list[angle][1] + self.Atom_coordinate[atom][3] * self.HKL_list[angle][2]))
-                FHKL_square_right += fi * np.sin(2 * np.pi * (self.Atom_coordinate[atom][1] * self.HKL_list[angle][0] +
-                                                    self.Atom_coordinate[atom][2] * self.HKL_list[angle][1] + self.Atom_coordinate[atom][3] * self.HKL_list[angle][2]))
-            FHKL_square.append(FHKL_square_left ** 2 + FHKL_square_right ** 2)
+    def Simulate(self,plot=True, write_in = True, Vacancy=False, Vacancy_atom = None, Vacancy_ratio = None,orientation=None,thermo_vib=None,zero_shift = None, bacI=False,seed=10):
+        """
+        orientation: The default value is 'none,' or you can input a list such as [-0.2, 0.3], adjusting intensity within the range of (1-20%)I to (1+30%)I.
 
+        thermo_vib: The default is 'none,' or you can input a float, for example, thermo_vib=0.05, representing the variability in the average atom position. It is recommended to use values between 0.05 and 0.5 angstrom.
+
+        zero_shift: The default is 'none,' or you can input a float, like zero_shift=1.5, which represents the instrument zero shift. It is recommended to use values between 2θ = -3 and 3 degrees.
+
+        bacI: The default is False. If bacI = True, a three-degree polynomial function is applied to simulate the background intensity.
+        """
+
+        if self.ReSolidSolution == None: 
+            _Atom_coordinate = self.Atom_coordinate
+            print(_Atom_coordinate)
+            Latticematrix = lattice_parameters_to_matrix(self.LatticCs[0], self.LatticCs[1], self.LatticCs[2], self.LatticCs[3], self.LatticCs[4], self.LatticCs[5])
+            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), './Simulation_WPEM/SolidSolu.vasp',)
+            
+        elif type(self.ReSolidSolution) == list: 
+            _Atom_coordinate = ReplaceAtom(self.Atom_coordinate,self.ReSolidSolution,self.RSSratio,Vacancy, Vacancy_atom, Vacancy_ratio,self.LatticCs,seed)
+            Latticematrix = lattice_parameters_to_matrix(self.LatticCs[0]*self.PeriodicArr[0], self.LatticCs[1]*self.PeriodicArr[1], self.LatticCs[2]*self.PeriodicArr[2], self.LatticCs[3], self.LatticCs[4], self.LatticCs[5])
+            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), './Simulation_WPEM/SolidSolu.vasp',self.PeriodicArr)
+        
+        else: print("ReSolidSolution is not a list")
+        FHKL_square = [] # [FHKL2_1, FHKL2_2,...] a list has the same length with HKL_list
+        if self.ReSolidSolution == None: 
+            for angle in range(len(self.HKL_list)):
+                FHKL_square_left = 0
+                FHKL_square_right = 0
+                for atom in range(len(_Atom_coordinate)):
+                    fi = cal_atoms(_Atom_coordinate[atom][0],self.mu_list[angle], self.wavelength)
+                    FHKL_square_left += fi * np.cos(2 * np.pi * (_Atom_coordinate[atom][1] * self.HKL_list[angle][0] +
+                                                        _Atom_coordinate[atom][2] * self.HKL_list[angle][1] + _Atom_coordinate[atom][3] * self.HKL_list[angle][2]))
+                    FHKL_square_right += fi * np.sin(2 * np.pi * (_Atom_coordinate[atom][1] * self.HKL_list[angle][0] +
+                                                        _Atom_coordinate[atom][2] * self.HKL_list[angle][1] + _Atom_coordinate[atom][3] * self.HKL_list[angle][2]))
+                FHKL_square.append(FHKL_square_left ** 2 + FHKL_square_right ** 2)
+        
+        elif type(self.ReSolidSolution) == list:
+            for angle in range(len(self.HKL_list)):
+                FHKL_square_left = 0
+                FHKL_square_right = 0
+                for atom in range(len(_Atom_coordinate)):
+                    fi = cal_atoms(_Atom_coordinate[atom][0],self.mu_list[angle], self.wavelength)
+                    FHKL_square_left += fi * np.cos(2 * np.pi * (_Atom_coordinate[atom][1] * self.HKL_list[angle][0]*self.PeriodicArr[0] +
+                                                        _Atom_coordinate[atom][2] * self.HKL_list[angle][1]*self.PeriodicArr[1] + _Atom_coordinate[atom][3] * self.HKL_list[angle][2]*self.PeriodicArr[2]))
+                    FHKL_square_right += fi * np.sin(2 * np.pi * (_Atom_coordinate[atom][1] * self.HKL_list[angle][0]*self.PeriodicArr[0] +
+                                                        _Atom_coordinate[atom][2] * self.HKL_list[angle][1]*self.PeriodicArr[1] + _Atom_coordinate[atom][3] * self.HKL_list[angle][2]*self.PeriodicArr[2]))
+                FHKL_square.append(FHKL_square_left ** 2 + FHKL_square_right ** 2)
         # cal unit cell volume
         VolumeFunction = LatticVolume(self.crystal_system)
         sym_a, sym_b, sym_c, angle1, angle2, angle3 = symbols('sym_a sym_b sym_c angle1 angle2 angle3')
@@ -90,10 +171,27 @@ class XRD_profile(object):
 
         # I = C / (V0 ** 2) * F2HKL * P * (1 + cos(2*theta) ** 2) / (sin(theta) **2 * cos(theta))
         # without considering the temperature and line absorption factor
-        Ints = []
+        _Ints = []
         for angle in range(len(FHKL_square)):
-            Ints.append(float(FHKL_square[angle] * self.Mult[angle] / Volume ** 2
+            _Ints.append(float(FHKL_square[angle] * self.Mult[angle] / Volume ** 2
                         * (1 + np.cos(self.mu_list[angle] * np.pi/180) ** 2) / (np.sin(self.mu_list[angle] / 2 * np.pi/180) **2 * np.cos(self.mu_list[angle] / 2 * np.pi/180))))
+        
+        # augmentation
+        
+        if orientation is not None and thermo_vib is None:
+            Ints = []
+            for k in range(len(_Ints)):
+                Ints.append(_Ints[k] * np.clip(np.random.normal(loc=1, scale=0.2), 1-orientation[0], 1+orientation[0]))
+
+        elif orientation is not None and thermo_vib is not None:
+            Ints = []
+            for k in range(len(_Ints)):
+                Ori_coe = np.clip(np.random.normal(loc=1, scale=0.2), 1-orientation[0], 1+orientation[0])
+                M = 8/3 * np.pi**2*thermo_vib**2 * (np.sin(np.radians(self.mu_list[k]/2)) / self.wavelength)**2
+                Deb_coe = np.exp(-2*M)
+                Ints.append(_Ints[k] * Ori_coe * Deb_coe)
+        else:
+            Ints = _Ints
         
         if self.PeakWidth == True:
             x_sim = np.arange(self.two_theta_range[0],self.two_theta_range[1],self.two_theta_range[2])
@@ -109,13 +207,30 @@ class XRD_profile(object):
             # normalize the profile
             nor_y = y_sim / y_sim.sum()
 
+       
+        if zero_shift is not None:
+            x_sim += zero_shift
+            self.mu_list = np.array(self.mu_list) + zero_shift
+        if bacI == True:
+            random_polynomial = generate_random_polynomial(degree=6)
+            _bac = random_polynomial(x_sim)
+            _bac -= _bac.min()
+            _bacI = _bac / _bac.max() * nor_y.max() * 0.1
+            nor_y +=  np.flip(_bacI)
+       
+        nor_y = scale_list(nor_y)
         if plot == True:
             # save simulation results
-            plt.plot(x_sim, nor_y, '-g', label= "Simulated Profile (crystal)", )
+            fig, ax = plt.subplots()
+            ax.plot(x_sim, nor_y, '-k', label= "WPEM simulation", )
+            ax.scatter(x_sim, nor_y, s=3,c='r', alpha=0.5,label= "signals", )
+            for x in self.mu_list:
+                ax.vlines(x=x, ymin=-10, ymax=-5, color='b', linestyle='-',)
             plt.xlabel('2\u03b8\u00B0')
             plt.ylabel('I (a.u.)')
-            plt.legend()
-            plt.savefig('./Simulation_WPEM/Simulation_profile.png', dpi=800)
+            ax.legend()
+            plt.savefig('./Simulation_WPEM/{}_Simulation_profile.png'.format(self.filepath[-11:-4]), dpi=800)
+            plt.savefig('./Simulation_WPEM/{}_Simulation_profile.svg'.format(self.filepath[-11:-4]), dpi=800)
             plt.show()
             plt.clf()
         else: pass
@@ -127,7 +242,7 @@ class XRD_profile(object):
             for i in range(len(Ints)):
                 res.append([i+1, self.HKL_list[i][0], self.HKL_list[i][1], self.HKL_list[i][2], self.Mult[i], self.mu_list[i],Ints[i]])
             res.insert(0, ['No.', 'H', 'K', 'L', 'Mult', '2theta/','Ints/'])
-            save_file = 'Simulation_WPEM/Bragg_peaks.csv'
+            save_file = 'Simulation_WPEM/{}_Bragg_peaks.csv'.format(self.filepath[-11:-4])
             dataFile = open(save_file, 'w')
             dataWriter = csv.writer(dataFile)
             dataWriter.writerows(res)
@@ -137,7 +252,7 @@ class XRD_profile(object):
             for i in range(len(x_sim)):
                 profile.append([i+1, x_sim[i], nor_y[i]])
             profile.insert(0, ['No.', 'x_simu', 'y_simu'])
-            save_file = 'Simulation_WPEM/Simu_profile.csv'
+            save_file = 'Simulation_WPEM/{}_Simu_profile.csv'.format(self.filepath[-11:-4])
             dataFile = open(save_file, 'w')
             dataWriter = csv.writer(dataFile)
             dataWriter.writerows(profile)
@@ -183,7 +298,12 @@ def lorenz_density(x, mu, gamma):
     return density
 
 def draw_peak_density(x, Weight, mu, gamma, sigma2):
-    peak_density = Weight * (lorenz_density(x, mu, gamma) + normal_density(x, mu, sigma2))
+    if sigma2 == 0:
+        peak_density = Weight * lorenz_density(x, mu, gamma)
+    else:
+        z = ((x-mu) + 1j * gamma) / (np.sqrt(sigma2) * np.sqrt(2))
+        Voigt = np.real(wofz(z) / (np.sqrt(sigma2) * np.sqrt(2 * np.pi)))
+        peak_density = Weight * Voigt
     return peak_density
 
 def getHeavyatom(s):
@@ -316,9 +436,151 @@ WAVELENGTHS = {
     "AgKb1": 0.497082,
 }
 
+def scale_list(lst):
+    max_value = max(lst)
+    if max_value == 0:
+        return [0] * len(lst)
+    scaled_list = [x * (100 / max_value) for x in lst]
+    return scaled_list
+
+
+def generate_random_polynomial(degree):
+    coefficients = np.random.randn(degree + 1)
+    return np.poly1d(coefficients)
 
 
 
+def generate_super_cell(input_coordinates, x_cells, y_cells, z_cells):
+    super_cell = []
+
+    for i in range(x_cells):
+        for j in range(y_cells):
+            for k in range(z_cells):
+                for atom in input_coordinates:
+                    atom_type = atom[0]
+                    x_original, y_original, z_original = atom[1], atom[2], atom[3]
+
+                    x_new = x_original + i
+                    y_new = y_original + j
+                    z_new = z_original + k
+
+                    super_cell.append([atom_type, x_new, y_new, z_new])
+    return super_cell
 
 
 
+def ReplaceAtom(Atom_coordinate, ReSolidSolution, RSSratio,Vacancy=False, Vacancy_atom = None, Vacancy_ratio = None,latticC=None,seed=10):
+    """
+    For a single type of vacancy atom
+    """
+    random.seed(seed)
+    if Vacancy == True and type(Vacancy_atom) == str and type(Vacancy_ratio) == int:
+        latticeMatrix = lattice_parameters_to_matrix(latticC[0], latticC[1], latticC[2], latticC[3], latticC[4], latticC[5])
+        # Count the number of atoms to be replaced
+        num_atoms_to_replace = round(len([atom for atom in Atom_coordinate if atom[0] == ReSolidSolution[0]]) * RSSratio)
+
+        # Count the number of vacancy atom
+        num_vacancy_atoms = num_atoms_to_replace * Vacancy_ratio
+        
+        # Get the indices of the atoms to be replaced
+        indices_to_replace = [i for i, atom in enumerate(Atom_coordinate) if atom[0] == ReSolidSolution[0]]
+        
+        # Randomly select indices to replace
+        indices_replaced = random.sample(indices_to_replace, num_atoms_to_replace)
+
+        indices_removed = []
+        # Replace the atoms at the selected indices
+        for index in indices_replaced:
+            Atom_coordinate[index][0] = ReSolidSolution[1]
+            indices_removed.append(find_nearest_vacancy_index(Atom_coordinate, Atom_coordinate[index],Vacancy_atom,num_vacancy_atoms,latticeMatrix))
+        Atom_coordinate = [x for i, x in enumerate(Atom_coordinate) if i not in indices_removed[0]]
+        
+    else : 
+        # Count the number of atoms to be replaced
+        num_atoms_to_replace = round(len([atom for atom in Atom_coordinate if atom[0] == ReSolidSolution[0]]) * RSSratio)
+        
+        # Get the indices of the atoms to be replaced
+        indices_to_replace = [i for i, atom in enumerate(Atom_coordinate) if atom[0] == ReSolidSolution[0]]
+        
+        # Randomly select indices to replace
+        indices_replaced = random.sample(indices_to_replace, num_atoms_to_replace)
+        
+        # Replace the atoms at the selected indices
+        for index in indices_replaced:
+            Atom_coordinate[index][0] = ReSolidSolution[1]
+    
+    return Atom_coordinate
+
+
+def distance(coord1, coord2):
+    return np.linalg.norm(coord1 - coord2)
+
+
+def find_nearest_vacancy_index(Atom_coordinate, target_atom,vacancy_atom,num,latticeMatrix):
+    distances = []
+    for i, atom in enumerate(Atom_coordinate):
+        if atom[0] == vacancy_atom:
+            dist = distance(np.dot(atom[1:],latticeMatrix), np.dot(target_atom[1:],latticeMatrix))
+            distances.append((dist, i))
+    
+    distances.sort()  # Sort distances
+    return [index for _, index in distances[:num]] 
+
+
+def lattice_parameters_to_matrix(a, b, c, alpha, beta, gamma):
+    a1 = a
+    b1 = b * math.cos(math.radians(gamma))
+    b2 = b * math.sin(math.radians(gamma))
+    c1 = c * math.cos(math.radians(beta))
+    c2 = c *(math.cos(math.radians(alpha)) - math.cos(math.radians(beta)) * math.cos(math.radians(gamma))) /  math.sin(math.radians(gamma))
+    al2 = math.cos(math.radians(alpha)) **2 
+    bet2 = math.cos(math.radians(beta)) **2 
+    gam2 = math.cos(math.radians(gamma)) **2 
+    c3 = c * math.sqrt(1 + 2 * math.cos(math.radians(alpha))*math.cos(math.radians(beta))*math.cos(math.radians(gamma)) - al2 - bet2 - gam2) / math.sin(math.radians(gamma))
+    
+    lattice_matrix = [[round(a1,8), 0, 0],
+                      [round(b1,8),round(b2,8), 0],
+                      [round(c1,8), round(c2,8), round(c3,8)]]
+    
+    return lattice_matrix
+
+
+def write_vasp_file(matrix, atom, filename,PeriodicArr=[1,1,1]):
+    with open(filename, 'w') as file:
+        atom_count = count_atoms(atom)
+        file.write('WPEM developed by BinCAO (HKUST(GZ)) https://github.com/Bin-Cao/WPEM' + '\n')
+        file.write(' 1.0000000000000000' + '\n')
+
+        for row in matrix:
+            file.write(f'    {row[0]}    {row[1]}    {row[2]}\n')
+
+        file.write(' '.join(atom_count.keys()) + '\n')
+        file.write(' '.join(str(value) for value in atom_count.values()) + '\n')
+        
+        file.write('Direct' + '\n')
+
+        for atom_info in atom:
+            file.write(f'  {atom_info[1]/PeriodicArr[0]} {atom_info[2]/PeriodicArr[1]} {atom_info[3]/PeriodicArr[2]}\n')
+
+def count_atoms(atom):
+    atom_count = {}
+    for atom_info in atom:
+        atom_type = getHeavyatom(atom_info[0])
+        if atom_type in atom_count:
+            atom_count[atom_type] += 1
+        else:
+            atom_count[atom_type] = 1
+    return atom_count
+
+def group_elements_by_first_element(input_list):
+    result = {}
+    for item in input_list:
+        key = item[0]
+        if key in result:
+            result[key].append(item)
+        else:
+            result[key] = [item]
+    output_list = []
+    for key in result:
+        output_list += result[key]
+    return output_list

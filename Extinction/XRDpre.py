@@ -14,6 +14,7 @@ from .CifReader import CifFile
 from ..XRDSimulation.DiffractionGrometry.atom import atomics
 from ..EMBraggOpt.BraggLawDerivation import BraggLawDerivation
 from ..Plot.UnitCell import plotUnitCell
+from ..EMBraggOpt.WPEMFuns.SolverFuns import cal_system
 
 class profile:
     def __init__(self, wavelength='CuKa',two_theta_range=(10, 90),show_unitcell=False,cal_extinction = True):
@@ -36,6 +37,32 @@ class profile:
         self.cal_extinction = cal_extinction
         self.show_unitcell = show_unitcell
 
+    # Calculate the volume of the unit cell
+    def LatticVolume(self, crystal_system):
+        # imput the number of crystal_system
+        crystal_system = crystal_system
+        sym_a, sym_b, sym_c, angle1, angle2, angle3 = \
+            symbols('sym_a sym_b sym_c angle1 angle2 angle3')
+        if crystal_system == 1:  # Cubic
+            Volume = sym_a ** 3
+        elif crystal_system == 2:  # Hexagonal
+            Volume = sym_a ** 2 * sym_c * np.sqrt(3) / 2
+        elif crystal_system == 3:  # Tetragonal
+            Volume = sym_a * sym_a * sym_c
+        elif crystal_system == 4:  # Orthorhombic
+            Volume = sym_a * sym_b * sym_c
+        elif crystal_system == 5:  # Rhombohedral
+            Volume = sym_a ** 3 * np.sqrt(1 - 3 * cos(angle1) ** 2 + 2 * cos(angle1) ** 3)
+        elif crystal_system == 6:  # Monoclinic
+            Volume = sym_a * sym_b * sym_c * sin(angle2)
+        elif crystal_system == 7:  # Triclinic
+            Volume = sym_a * sym_b * sym_c * np.sqrt(1 - cos(angle1) ** 2 - cos(angle2) **2
+                                              - cos(angle3) ** 2 + 2 * cos(angle1) * cos(angle2) * cos(angle3))
+        else:
+            Volume = -1
+
+        return Volume
+    
     def generate(self, filepath ,latt = None, Asymmetric_atomic_coordinates = None,):
         """
         for a single crystal
@@ -107,8 +134,18 @@ class profile:
         if self.show_unitcell == True:
             plotUnitCell(AtomCoordinates,latt,).plot()
         else: pass
-        
-        return latt, AtomCoordinates
+
+        lattic_mass = cal_lattic_mass(AtomCoordinates)
+
+        VolumeFunction = self.LatticVolume(cal_system([latt])[0])
+        sym_a, sym_b, sym_c, angle1, angle2, angle3 = symbols('sym_a sym_b sym_c angle1 angle2 angle3')
+        lattic_volume = (float(VolumeFunction.subs(
+            {sym_a: latt[0], sym_b: latt[1], sym_c:latt[2],
+            angle1: latt[3] * np.pi/180 , angle2: latt[4] * np.pi/180, angle3: latt[5] * np.pi/180}))
+            )
+
+        lattic_density = lattic_mass / lattic_volume
+        return latt, AtomCoordinates,lattic_density
 
 ########################################################################
 def getFloat(s):
@@ -689,3 +726,142 @@ def grid_atom():
     index_of_origin = np.where((grid[:, 0] == 0) & (grid[:, 1] == 0) & (grid[:, 2] == 0))[0][0]
     grid[[0, index_of_origin]] = grid[[index_of_origin, 0]]
     return grid
+
+
+def cal_lattic_mass(structure_factor):
+    # structure_factor:  ==> [['atom1',0,0,0],['atom2',0.5,1,1],.....]
+    mass = 0
+    for atom in structure_factor:
+        _a = re.sub(r'[^A-Za-z]+', "", atom[0])
+        result = find_atomic_mass(_a)
+        if result is None:
+            print(f"Element with symbol {_a} not found.")
+            result = 0
+        mass += result
+    return mass
+
+
+def find_atomic_mass(element_symbol):
+    # def the relative atomic mass
+    atomic_masses = {
+        'H': 1.008,
+        'He': 4.0026,
+        'Li': 6.94,
+        'Be': 9.0122,
+        'B': 10.81,
+        'C': 12.011,
+        'N': 14.007,
+        'O': 15.999,
+        'F': 18.998,
+        'Ne': 20.180,
+        'Na': 22.990,
+        'Mg': 24.305,
+        'Al': 26.982,
+        'Si': 28.085,
+        'P': 30.974,
+        'S': 32.06,
+        'Cl': 35.45,
+        'K': 39.098,
+        'Ar': 39.948,
+        'Ca': 40.078,
+        'Sc': 44.956,
+        'Ti': 47.867,
+        'V': 50.942,
+        'Cr': 51.996,
+        'Mn': 54.938,
+        'Fe': 55.845,
+        'Ni': 58.693,
+        'Cu': 63.546,
+        'Zn': 65.38,
+        'Ga': 69.723,
+        'Ge': 72.630,
+        'As': 74.922,
+        'Se': 78.971,
+        'Br': 79.904,
+        'Kr': 83.798,
+        'Rb': 85.468,
+        'Sr': 87.62,
+        'Y': 88.906,
+        'Zr': 91.224,
+        'Nb': 92.906,
+        'Mo': 95.95,
+        'Tc': 98.0,
+        'Ru': 101.07,
+        'Rh': 102.91,
+        'Pd': 106.42,
+        'Ag': 107.87,
+        'Cd': 112.41,
+        'In': 114.82,
+        'Sn': 118.71,
+        'Sb': 121.76,
+        'Te': 127.60,
+        'I': 126.90,
+        'Xe': 131.29,
+        'Cs': 132.91,
+        'Ba': 137.33,
+        'La': 138.91,
+        'Ce': 140.12,
+        'Pr': 140.91,
+        'Nd': 144.24,
+        'Pm': 145.0,
+        'Sm': 150.36,
+        'Eu': 151.96,
+        'Gd': 157.25,
+        'Tb': 158.93,
+        'Dy': 162.50,
+        'Ho': 164.93,
+        'Er': 167.26,
+        'Tm': 168.93,
+        'Yb': 173.04,
+        'Lu': 174.97,
+        'Hf': 178.49,
+        'Ta': 180.95,
+        'W': 183.84,
+        'Re': 186.21,
+        'Os': 190.23,
+        'Ir': 192.22,
+        'Pt': 195.08,
+        'Au': 196.97,
+        'Hg': 200.59,
+        'Tl': 204.38,
+        'Pb': 207.2,
+        'Bi': 208.98,
+        'Th': 232.04,
+        'Pa': 231.04,
+        'U': 238.03,
+        'Np': 237.0,
+        'Pu': 244.0,
+        'Am': 243.0,
+        'Cm': 247.0,
+        'Bk': 247.0,
+        'Cf': 251.0,
+        'Es': 252.0,
+        'Fm': 257.0,
+        'Md': 258.0,
+        'No': 259.0,
+        'Lr': 262.0,
+        'Rf': 267.0,
+        'Db': 270.0,
+        'Sg': 271.0,
+        'Bh': 270.0,
+        'Hs': 277.0,
+        'Mt': 276.0,
+        'Ds': 281.0,
+        'Rg': 280.0,
+        'Cn': 285.0,
+        'Nh': 284.0,
+        'Fl': 289.0,
+        'Mc': 288.0,
+        'Lv': 293.0,
+        'Ts': 294.0,
+        'Og': 294.0,
+        'Co': 58.933,
+    }
+
+    element_symbol = element_symbol.capitalize()
+
+    if element_symbol in atomic_masses:
+        return atomic_masses[element_symbol]
+    else:
+        return None  
+

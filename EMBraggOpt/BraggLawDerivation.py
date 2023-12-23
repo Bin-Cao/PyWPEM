@@ -501,8 +501,8 @@ class BraggLawDerivation:
                                                         mui_fit_abc_list)
                    
                     # each time we only update one lattice constant randomly 
-                    random_number = random.randint(0, 1)
-                    if random_number == 0:
+                    random_number = random.randint(0, 3)
+                    if random_number <= 2:
                         a_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a - tao, ini_b,
                                                         ini_c, ini_la1, ini_la2, ini_la3, 1, wavelength, mui_fit_abc_list)
                         b_lef_derive = self.two_up_derivative(crystal_sys, h_fit_abc, k_fit_abc, l_fit_abc, ini_a,ini_b - tao,

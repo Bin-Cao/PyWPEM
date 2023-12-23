@@ -15,14 +15,15 @@ class TwiceFilter:
     Smoothing technique Savitzky-Golay filter is applied to improve the signal/noise ratio 
     after inverse Fourier transform and give a set of slowly varying background points
     """
-    def __init__(self, Model='XRD'):
+    def __init__(self, Model='XRD', segement=None):
         """
         Display the background curve of XRD diffraction spectrum (Model='XRD')
         and Raman spectrum (Model='Raman') according to the type
         """
 
-        # Model = 'XRD' or 'Raman'
+        # Model = 'XRD' or 'Raman' or 'XPS
         self.Model = Model
+        self.segement = segement
         os.makedirs('ConvertedDocuments', exist_ok=True)
 
     def convert_file(self, file_name):
@@ -54,7 +55,7 @@ class TwiceFilter:
                 print(intensity[i], file=wfid)
 
     def FFTandSGFilter(self, intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
-                       polyorder=3,  poly_n=6, mode='nearest', bac_var_type='constant'):
+                       polyorder=3,  poly_n=6, mode='nearest', bac_var_type='constant',noise=None):
         """
         :param intensity_csv: the experimental observation
 
@@ -90,7 +91,11 @@ class TwiceFilter:
             
         :param bac_var_type: 
             A pattern describing the background distribution
-            one of constant, polynomial, multivariate gaussia
+            one of constant, polynomial, multivariate gaussian
+
+        :param noise:
+            float, default is None 
+            the noise level applied to gaussian processes model
 
         :return:
         """
@@ -104,6 +109,9 @@ class TwiceFilter:
 
         angle = intensity_csv.iloc[:, 0]
         signal = intensity_csv.iloc[:, 1]
+        if self.Model == 'XPS':
+            # in usual, the experimental XPS energy is recorded in a descreasing order
+            angle, signal = reorder_vector(angle, signal )
         # The complex-valued FFT computes the Fourier transform of signal, 
         # which represents the decomposition of the signal into its component frequencies.
         complex_array = nf.fft(signal)
@@ -133,42 +141,61 @@ class TwiceFilter:
         Twotheta = []
         BacSelected = []
         BacOrigPoint = []
-
         if bac_split == None:
-            print('You must input the parameter bac_split')
+                print('You must input the parameter bac_split')
 
-        elif type(bac_split) == int:
-            if lowAngleRange == None:
-                choiselg_num = int(bac_num / bac_split)
-                Split_filter_intensity = self.chunks(SG_filter_intensity, bac_split)
-                for part in range(bac_split):
-                    for num in range(choiselg_num):
-                        PairIndex.append((heapq.nsmallest(choiselg_num, enumerate(Split_filter_intensity[part]),
-                                                          key=lambda x: x[1])[num][0]) + part * len(Split_filter_intensity[0]))
+        if self.segement == None:
+            if type(bac_split) == int:
+                if lowAngleRange == None:
+                    choiselg_num = int(bac_num / bac_split)
+                    Split_filter_intensity = self.chunks(SG_filter_intensity, bac_split)
+                    for part in range(bac_split):
+                        for num in range(choiselg_num):
+                            PairIndex.append((heapq.nsmallest(choiselg_num, enumerate(Split_filter_intensity[part]),
+                                                            key=lambda x: x[1])[num][0]) + part * len(Split_filter_intensity[0]))
 
-            elif type(lowAngleRange) == int or type(lowAngleRange) == float:
-                lowAngleRange_index = np.where(angle >= lowAngleRange)[0][0]
-                lowangle_num = np.max((int(bac_num * (lowAngleRange_index / len(angle))), int(0.2*(lowAngleRange_index+1))))
-                choiselg_num = np.max((int(lowangle_num / 5), 1))
-                other_num = bac_num - lowangle_num
-                Split_filter_intensity = self.chunks(SG_filter_intensity[0:lowAngleRange_index], 5)
-                for part in range(len(Split_filter_intensity)):
-                    for num in range(choiselg_num):
-                        PairIndex.append((heapq.nsmallest(choiselg_num, enumerate(Split_filter_intensity[part]),
-                                                          key=lambda x: x[1])[num][0]) + part * len(Split_filter_intensity[0]))
+                elif type(lowAngleRange) == int or type(lowAngleRange) == float:
+                    lowAngleRange_index = np.where(angle >= lowAngleRange)[0][0]
+                    lowangle_num = np.max((int(bac_num * (lowAngleRange_index / len(angle))), int(0.2*(lowAngleRange_index+1))))
+                    choiselg_num = np.max((int(lowangle_num / 5), 1))
+                    other_num = bac_num - lowangle_num
+                    Split_filter_intensity = self.chunks(SG_filter_intensity[0:lowAngleRange_index], 5)
+                    for part in range(len(Split_filter_intensity)):
+                        for num in range(choiselg_num):
+                            PairIndex.append((heapq.nsmallest(choiselg_num, enumerate(Split_filter_intensity[part]),
+                                                            key=lambda x: x[1])[num][0]) + part * len(Split_filter_intensity[0]))
 
-                __choiselg_num = int(other_num / bac_split)
-                __Split_filter_intensity = self.chunks(SG_filter_intensity[lowAngleRange_index:-1], bac_split)
+                    __choiselg_num = int(other_num / bac_split)
+                    __Split_filter_intensity = self.chunks(SG_filter_intensity[lowAngleRange_index:-1], bac_split)
 
-                for __part in range(bac_split):
-                    for __num in range(__choiselg_num):
-                        PairIndex.append((heapq.nsmallest(__choiselg_num, enumerate(__Split_filter_intensity[__part]),
-                                                          key=lambda x: x[1])[__num][0]) + __part * len(__Split_filter_intensity[0]) + lowAngleRange_index)
+                    for __part in range(bac_split):
+                        for __num in range(__choiselg_num):
+                            PairIndex.append((heapq.nsmallest(__choiselg_num, enumerate(__Split_filter_intensity[__part]),
+                                                            key=lambda x: x[1])[__num][0]) + __part * len(__Split_filter_intensity[0]) + lowAngleRange_index)
+                else:
+                    print('Type Error \'lowAngleRange\'')
+
             else:
-                print('Type Error \'lowAngleRange\'')
+                print('Type Error \'segmentation strategy\'')
 
-        else:
-            print('Type Error \'segmentation strategy\'')
+        elif type(self.segement) == list:
+            total_length = 0
+            for seg in range(len(self.segement)):
+                total_length += (self.segement[seg][1] - self.segement[seg][0])
+
+            choiselg_num = []
+            for seg in range(len(self.segement)):
+                choiselg_num.append(int(bac_num * (self.segement[seg][1] - self.segement[seg][0]) / total_length)) 
+            for seg in range(len(self.segement)):
+                low_index = np.where(angle == self.segement[seg][0])[0][0]
+                up_index = np.where(angle == self.segement[seg][1])[0][0]
+                int_segement = SG_filter_intensity[low_index:up_index]
+                num = choiselg_num[seg]
+             
+                points = heapq.nsmallest(num, enumerate(int_segement), key=lambda x: x[1])
+                for k in range(len(points)):
+                    PairIndex.append(points[k][0] + low_index)
+
 
         PairIndex.sort()
         for pair in range(len(PairIndex)):
@@ -213,6 +240,8 @@ class TwiceFilter:
             plt.scatter(Twotheta, BacSelected, color='r', s=5,zorder=2, label='background points')
             if self.Model == 'Raman':
                 plt.xlabel('Raman shift (cm\u207B\u00B9)')
+            elif self.Model == 'XPS':
+                plt.xlabel('Binding energy (eV)')
             else:
                 plt.xlabel('2\u03b8\u00B0')
             plt.ylabel('I (a.u.)')
@@ -257,6 +286,8 @@ class TwiceFilter:
             plt.scatter(Twotheta, BacSelected, color='r', s=5, zorder=2,label='background points')
             if self.Model == 'Raman':
                 plt.xlabel('Raman shift (cm\u207B\u00B9)')
+            elif self.Model == 'XPS':
+                plt.xlabel('Binding energy (eV)')
             else:
                 plt.xlabel('2\u03b8\u00B0')
             plt.ylabel('I (a.u.)')
@@ -268,11 +299,17 @@ class TwiceFilter:
 
         #  if choose 'multivariate gaussian', WPEM models the background function as a multivariate gaussian of diffraction angles with variance
         elif bac_var_type == 'multivariate gaussian' :
+            if noise == None :
+                kernel = 1 * RBF() + WhiteKernel()
+                model = Gpr(kernel = kernel, n_restarts_optimizer = 10, alpha = 0, normalize_y = True, random_state = 0).fit(np.array(Twotheta).reshape(-1,1), BacOrigPoint)
+            elif type(noise) == float:
+                kernel = 1 * RBF()
+                model = Gpr(kernel = kernel, n_restarts_optimizer = 10, alpha = noise, normalize_y = True, random_state = 0).fit(np.array(Twotheta).reshape(-1,1), BacOrigPoint)
+            else:
+                print('Warning - the type of noise must be float or None')
 
-            kernel = 1 * RBF() + WhiteKernel()
-            model = Gpr(kernel = kernel, n_restarts_optimizer = 10, alpha = 0, normalize_y = True, random_state = 0).fit(np.array(Twotheta).reshape(-1,1), BacOrigPoint)
+            
             background_meanfunction, standard_deviation = model.predict(np.array(angle).reshape(-1,1), return_std=True)
-
 
 
             Intensity_mean, Intensity_dev = model.predict(angle[:, np.newaxis], return_std=True)
@@ -298,6 +335,8 @@ class TwiceFilter:
             plt.scatter(Twotheta, BacSelected, color='r', s=5, zorder=2,label='background points')
             if self.Model == 'Raman':
                 plt.xlabel('Raman shift/(cm-1)')
+            elif self.Model == 'XPS':
+                plt.xlabel('Binding energy (eV)')
             else:
                 plt.xlabel('2\u03b8\u00B0')
             plt.ylabel('I (a.u.)')
@@ -325,6 +364,8 @@ class TwiceFilter:
         plt.scatter(Twotheta, BacSelected, s=5, c='r', zorder=2,label='selected background points')
         if self.Model == 'Raman':
             plt.xlabel('Raman shift (cm\u207B\u00B9)')
+        elif self.Model == 'XPS':
+            plt.xlabel('Binding energy (eV)')
         else:
             plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
@@ -338,6 +379,8 @@ class TwiceFilter:
         plt.scatter(Twotheta, BacSelected, c='r',zorder=2, label='background points')
         if self.Model == 'Raman':
             plt.xlabel('Raman shift (cm\u207B\u00B9)')
+        elif self.Model == 'XPS':
+            plt.xlabel('Binding energy (eV)')
         else:
             plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
@@ -350,6 +393,8 @@ class TwiceFilter:
         plt.plot(angle, inten_no_bac, color='k', label='de_background intensity')
         if self.Model == 'Raman':
             plt.xlabel('Raman shift (cm\u207B\u00B9)')
+        elif self.Model == 'XPS':
+            plt.xlabel('Binding energy (eV)')
         else:
             plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
@@ -369,4 +414,13 @@ class TwiceFilter:
         m = m
         n = int(math.ceil(len(arr) / float(m)))
         return [arr[i:i + n] for i in range(0, len(arr), n)]
+
+def reorder_vector(EBenergy, inten):
+    # Create a list of tuples containing the EBenergy and inten values
+    data = list(zip(EBenergy, inten))
+    # Sort the data based on the EBenergy values in ascending order
+    sorted_data = sorted(data, key=lambda x: x[0])
+    # Extract the sorted EBenergy and inten values into separate lists
+    sorted_EBenergy, sorted_inten = zip(*sorted_data)
+    return np.array(sorted_EBenergy), np.array(sorted_inten)
 

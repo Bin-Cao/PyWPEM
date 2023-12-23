@@ -85,8 +85,12 @@ from .DecomposePlot.plot import Decomposedpeaks
 from .XRDSimulation.Simulation import XRD_profile
 from .Extinction.XRDpre import profile
 from .StructureOpt.SiteOpt import BgolearnOpt
+from .WPEMXPS.XPSEM import XPSsolver
+from .WPEMXAS.EXAFS import EXAFS
+from .GraphStructure.graph import CrystalGraph
 # from .Raman.Decompose.RamanFitting import fit
 import datetime
+import numpy as np
 from time import time
 import datetime
 
@@ -109,10 +113,10 @@ print('URL : https://github.com/Bin-Cao/WPEM')
 print('Executed on :',formatted_date_time, ' | Have a great day.')
 print('='*100)
 
-def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, two_theta_range = None,structure_factor = None, 
+def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, density_list=None, two_theta_range = None,structure_factor = None, 
         bta=0.8, bta_threshold = 0.5,limit=0.0005, iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0.5, s_angle=50, 
         subset_number=9, low_bound=65, up_bound=80, InitializationEpoch=2, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =3, EXACT = False,
-        Cu_tao = None, Ave_Waves = False,loadParams=False,):
+        Cu_tao = None, Ave_Waves = False,loadParams=False, ZeroShift=False,):
     """
     :param wavelength: list type, The wavelength of diffraction waves
     :param Var: a constant or a array, Statistical variance of background 
@@ -120,9 +124,14 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     :param no_bac_intensity_file: csv document, Diffraction intensity file with out bacground intensity
     :param original_file: csv document, Diffraction intensity file
     :param bacground_file: csv document, The fitted background intensity 
+    :param density_list : list default is None, the densities of crytal, can be calculated by fun. WPEM.CIFpreprocess()
+        e.g., 
+        _,_,d1 = WPEM.CIFpreprocess()
+        _,_,d2 = WPEM.CIFpreprocess()
+        density_list = [d1,d2]
     :param two_theta_range: The studied range of diffraction angels 
     :param structure_factor: list, if EXACT = True, the structure factor is used calculating
-            the volume fraction of mixed components
+            the mass fraction of mixed components
     :param bta: float default = 0.8, the ratio of Lorentzian components in PV function
     :param bta_threshold: float default = 0.5, a preset lower boundary of bta
     :param limit: float default = 0.0005, a preset lower boundary of sigma2
@@ -137,17 +146,22 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     :param MODEL: str default = 'REFINEMENT' for lattice constants REFINEMENT; 'ANALYSIS' for components ANALYSIS
     :param Macromolecule : Boolean default = False, for profile fitting of crystals. True for macromolecules
     :param cpu : int default = 4, the number of processors
-    :param num : int default = 3, the number of the strongest peaks used in calculating volume fraction
-    :param EXACT : Boolean default = False, True for exact calculation of volume fraction by diffraction intensity theory
+    :param num : int default = 3, the number of the strongest peaks used in calculating mass fraction
+    :param EXACT : Boolean default = False, True for exact calculation of mass fraction by diffraction intensity theory
     :param loadParams : Boolean default = False, for loading parameters
+    :param ZeroShift : If ZeroShift == True and the standard sample is available, the instrument offset can be calibrated
     :return: An instantiated model
     """
     
-    if Ave_Waves == 1:
+    if Ave_Waves == 1 :
         wavelength = [2/3 * wavelength[0]+ 1/3 * wavelength[1]]
     else:
         pass
-
+    if ZeroShift == True and len(wavelength) == 2:
+        wavelength = [2/3 * wavelength[0]+ 1/3 * wavelength[1]]
+    else:
+        pass
+    
     time0 = time()
     start_time = datetime.datetime.now()
     print('Started at', start_time.strftime('%c'),'\n')
@@ -179,10 +193,10 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     
     Inst_WPEM = WPEMsolver(wavelength,  Var,  asy_C,  s_angle,
         subset_number,  low_bound,  up_bound,
-        Lattice_constants,singal, no_bac_intensity_file,  original_file,
+        Lattice_constants, density_list, singal, no_bac_intensity_file,  original_file,
         bacground_file, two_theta_range, initial_peak_file,  bta,  bta_threshold,
         limit,  iter_limit, w_limit, iter_max,  lock_num,  structure_factor,  MODEL,
-        InitializationEpoch,Macromolecule, cpu,  num, EXACT, Cu_tao,loadParams,
+        InitializationEpoch,Macromolecule, cpu,  num, EXACT, Cu_tao,loadParams,ZeroShift
     )
         
     Rp, Rwp, i_ter, flag = Inst_WPEM.cal_output_result()
@@ -210,7 +224,7 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     return Durtime
 
 def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
-                    polyorder=3, poly_n=6, mode='nearest', bac_var_type='constant', Model='XRD'):
+                    polyorder=3, poly_n=6, mode='nearest', bac_var_type='constant', Model='XRD',noise=None,segement=None):
     """
     :param intensity_csv: the experimental observation
     :param LFctg: low frequency filter Percentage, default  = 0.5
@@ -240,12 +254,15 @@ def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, 
         one of constant, polynomial, multivariate gaussia
     :param  Model:
         Display the background curve of XRD diffraction spectrum (Model='XRD')
-        and Raman spectrum (Model='Raman') according to the type
+        or Raman spectrum (Model='Raman') or X-ray photoemission spectrography (Model='XPS') according to the type
+    :param noise:
+            float, default is None 
+            the noise level applied to gaussian processes model
     :return:
         std of the background distribution
     """
-    module = TwiceFilter(Model)
-    return module.FFTandSGFilter(intensity_csv, LFctg, lowAngleRange, bac_num, bac_split, window_length,polyorder,  poly_n, mode, bac_var_type)
+    module = TwiceFilter(Model,segement)
+    return module.FFTandSGFilter(intensity_csv, LFctg, lowAngleRange, bac_num, bac_split, window_length,polyorder,  poly_n, mode, bac_var_type,noise)
     
 def FileTypeCovert(file_name):
     module = TwiceFilter()
@@ -274,33 +291,67 @@ def AmorphousRDFun(wavelength, r_max = 5,density_zero=None,NAa=None,highlight= 4
     module = RadialDistribution(wavelength, r_max)
     return module.RDF(density_zero,NAa,highlight,value)
 
-def Plot_Components(lowboundary, upboundary, wavelength,name = None, Macromolecule = False,phase = 1,Pic_Title = False):
+def Plot_Components(lowboundary, upboundary, wavelength, density_list=None, name = None, Macromolecule = False,phase = 1,Pic_Title = False,lifting=None):
     """
     :param lowboundary : float, the smallest diffraction angle studied
     :param upboundary : float, the largest diffraction angle studied 
     :param wavelength : list, the wavelength of the X rays
+    :param density_list : list default is None, the densities of crytal, can be calculated by fun. WPEM.CIFpreprocess()
+        e.g., 
+        _,_,d1 = WPEM.CIFpreprocess()
+        _,_,d2 = WPEM.CIFpreprocess()
+        density_list = [d1,d2]
     :param name : list, assign the name of each crystal through this parameter
     :param Macromolecule: whether it contains amorphous, used in amorphous fitting
     :param phase: the number of compounds contained in diffraction signals
     :param Pic_Title: Whether to display the title of the pictures, some title is very long
     """
     module = Decomposedpeaks()
-    return module.decomposition_peak(lowboundary, upboundary, wavelength,name, Macromolecule ,phase,Pic_Title)
+    return module.decomposition_peak(lowboundary, upboundary, wavelength,density_list,name, Macromolecule ,phase,Pic_Title,lifting)
 
-def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),LatticCs = None,PeakWidth=False, CSWPEMout = None):
+def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90, 0.01),SuperCell=False,PeriodicArr=[3,3,3],ReSolidSolution = None, RSSratio=0.1, Vacancy=False, Vacancy_atom = None, Vacancy_ratio = None,GrainSize = None,LatticCs = None,PeakWidth=True, CSWPEMout = None,orientation=None,thermo_vib=None,zero_shift = None, bacI=False,seed=42):
     """
     :param filepath (str): file path of the cif file to be calculated
     :param two_theta_range ([float of length 2]): Tuple for range of
         two_thetas to calculate in degrees. Defaults to (0, 90). Set to
         None if you want all diffracted beams within the limiting
         sphere of radius 2 / wavelength.
+    :param SuperCell : : bool, default False
+        If True, a supercell will be established
+    :param PeriodicArr : list, default [3, 3, 3]
+        Periodic translation the lattice 3 times along x, y, z direction
+    :param ReSolidSolution : list, default None
+        If not None, should contain the original atom type and replace atom type
+        e.g., ReSolidSolution = ['Ru4+', 'Na2+'], means 'Na2+' replaces the 'Ru4+' atom locations
+    :param RSSratio :float, default 0.1
+        In the supercell, the percentage of 'Ru4+' atoms to be replaced randomly by 'Na2+'
+    :param Vacancy : bool, default False
+        If True, consider the charge balance, otherwise do not consider
+    :param Vacancy_atom : str, default None
+        If Vacancy is True, the atom to be considered for charge balancing
+        e.g., Vacancy_atom = 'O2+'
+    :param Vacancy_ratio : int, default None
+        If Vacancy is True, the ratio of the number of vacancy atoms to the number of replaced atoms
+        e.g., 1 means for each 'Ru4+' atom replaced by 'Na2+'atom, a vacancy 'O2+' is created for balancing the charge
+    :param GrainSize
+        The default value is 'none,' or you can input a float representing 
+        the grain size within a range of 5-30 nanometers.
     :param PeakWidth
         PeakWidth=False, The peak width of the simulated peak is 0
         PeakWidth=True, The peak width of the simulated peak is set to the peak obtained by WPEM
     :param CSWPEMout : location of corresponding Crystal System WPEMout file
+    :param orientation: The default value is 'none,' or you can input a list such as [-0.2, 0.3],
+        adjusting intensity within the range of (1-20%)I to (1+30%)I.
+    :param thermo_vib: The default is 'none,' or you can input a float, for example, thermo_vib=0.05, 
+        representing the variability in the average atom position. It is recommended to use values between 0.05 and 0.5 angstrom.
+    :param zero_shift: The default is 'none,' or you can input a float, like zero_shift=1.5,
+        which represents the instrument zero shift. It is recommended to use values between 2θ = -3 and 3 degrees.
+    :param bacI: The default is False. If bacI = True, a three-degree polynomial function is applied
+        to simulate the background intensity.
+    :param seed : default seed = 42
     return : Structure factors 
     """
-    return XRD_profile(filepath,wavelength,two_theta_range,LatticCs,PeakWidth, CSWPEMout).Simulate()
+    return XRD_profile(filepath,wavelength,two_theta_range,SuperCell,PeriodicArr,ReSolidSolution, RSSratio, GrainSize,LatticCs,PeakWidth, CSWPEMout).Simulate(Vacancy=Vacancy, Vacancy_atom = Vacancy_atom, Vacancy_ratio = Vacancy_ratio,orientation=orientation,thermo_vib=thermo_vib,zero_shift = zero_shift, bacI=bacI,seed=seed)
     
 def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False,cal_extinction=True):
     """
@@ -318,6 +369,7 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
     return 
     latt: lattice constants : [a, b, c, al1, al2, al3]
     AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
+    lattic_density: rou
     """
     return profile(wavelength,two_theta_range,show_unitcell,cal_extinction).generate(filepath,latt,AtomCoordinates)
 
@@ -325,6 +377,204 @@ def SubstitutionalSearch(xrd_pattern, cif_file,random_num=8, wavelength='CuKa',s
     return BgolearnOpt(xrd_pattern, cif_file, random_num,wavelength,search_cap,cal_extinction). Substitutional_SS(SolventAtom, SoluteAtom ,max_iter)
 
 
+def XPSfit(Var, atomIdentifier, no_bac_df, original_df, bacground_df, energy_range = None, bta=0.8, bta_threshold = 0.5,limit=0.0005, 
+           iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0., s_energy=0., tao=0.5, ratio=0.8,
+       InitializationEpoch=2,loadParams=False,):
+  
+    time0 = time()
+    start_time = datetime.datetime.now()
+    print('Started at', start_time.strftime('%c'),'\n')
+
+    
+    XPS = XPSsolver(Var, asy_C, s_energy, atomIdentifier, no_bac_df,original_df,bacground_df, energy_range, bta, 
+                    bta_threshold,limit, iter_limit,w_limit,iter_max,lock_num, InitializationEpoch, loadParams,tao,ratio
+    )
+        
+    Rp, Rwp, i_ter, flag = XPS.cal_output_result()
+
+    if flag == 1:
+        print("%s-th iterations, convergence is achieved." % i_ter +
+            '\n Rp: %.3f' % Rp + '\nRwp: %.3f ' % Rwp)
+    elif flag == 2:
+        print("%s-th iterations, reach the limit of ϵ." % i_ter +
+            '\n Rp: %.3f' % Rp + '\nRwp: %.3f ' % Rwp)
+    elif flag == 3:
+        print("%s-th iterations, reach the maximum number of iteration steps." % i_ter +
+            '\n Rp: %.3f' % Rp + '\nRwp: %.3f ' % Rwp)
+    elif flag == 4:
+        print("%s-th iterations, reach the limit of lock_num." % i_ter +
+            '\n Rp: %.3f' % Rp + '\nRwp: %.3f ' % Rwp)
+    elif flag == -1:
+        print('The three input files do not match!')
+
+    endtime = time()
+    Durtime = "%.0f hours " % int((endtime - time0) / 3600) + "%.0f minute  " % int(
+        ((endtime - time0) / 60) % 60) + "%.0f second  " % ((endtime - time0) % 60)
+    print('\n')
+    print('WPEM-XPS program running time : ', Durtime)
+    return Durtime
+
+def EXAFSfit(XAFSdata,  power = 2, distance = 5, k_point = 8,k = 3,s= None,window_size=30,hop_size=None,Extend=50,name = 'unknown',transform ='fourier',de_bac = False,Ezero = None, first_cutoff_energy=None,second_cutoff_energy=None):
+    """
+    :param XAFSdata : the document name of input data 
+    :param k_point :  default k_point = 8, the cut off range of k points
+    :param de_bac : default de_bac = False, 
+        has been processed to remove the absorption background
+    :param k : int, optional
+        Degree of the smoothing spline.  Must be 1 <= `k` <= 5.
+        ``k = 3`` is a cubic spline. Default is 3.
+        s : float or None, optional
+        Positive smoothing factor used to choose the number of knots.  Number
+        of knots will be increased until the smoothing condition is satisfied::
+
+            sum((w[i] * (y[i]-spl(x[i])))**2, axis=0) <= s
+
+        If `s` is None, ``s = len(w)`` which should be a good value if
+        ``1/w[i]`` is an estimate of the standard deviation of ``y[i]``.
+        If 0, spline will interpolate through all data points. Default is None.
+
+    :param transform, default is 'wavelet', the inverse transform manner, 'wavelet', 'fourier'
+    :paramCutoff_energy: The data behind cutoff energy will be used to calculate the mean absorption.
+
+    """
+    return EXAFS(XAFSdata,  power, distance , k_point ,k,s,window_size,hop_size,Extend,name,transform,de_bac).fit(Ezero , first_cutoff_energy,second_cutoff_energy)
+
+def CryGraph(folder_path,BK_boundary_condition = False):
+    """
+    :param folder_path: str, the folder path to save CIF files.
+    :param BK_boundary_condition: bool, default: False. If True, the Bon Kaman boundary condition is applied to construct graph edges. 
+        This may result in longer calculation times.
+    
+    # read in data
+    import numpy as np
+    import pickle
+    
+    # define the node of graphs
+    with open('./CifParserToGraph/Node.pkl', 'rb') as file:
+        Node = pickle.load(file)
+    
+    # define the edge of graphs
+    with open('./CifParserToGraph/Edge.pkl', 'rb') as file:
+        Edge = pickle.load(file)
+    
+    # define the label of graphs
+    y_sg = np.load('./CifParserToGraph/Y_group.npy')
+    y_ls = np.load('./CifParserToGraph/Y_system.npy')
+    """
+    CrystalGraph(folder_path).generate_graph(BK_boundary_condition)
 
 
 
+
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+# there are several tools developed for facilitating the usage of WPEM packages
+def ToMatrix(Node):
+    """
+    Convert a dictionary of values into a matrix.
+
+    Parameters:
+    - Node: Input dictionary in the form {key: (value1, value2, ...), ...}
+
+    Returns:
+    - matrix: Matrix representation of the values in the dictionary.
+    """
+    # Get the values from the dictionary
+    values = list(Node.values())
+    
+    # Convert the values to a matrix
+    matrix = np.array(values)
+    
+    return matrix
+
+
+def ToAdj(Edge, size, sel=False):
+    """
+    Generate an adjacency matrix.
+
+    Parameters:
+    - Edge: Edge data, in the form [[0, 24], [1, 25], ...]
+    - size: Size of the matrix
+    - sel: Whether to set the diagonal to 1, default is False
+
+    Returns:
+    - adjacency_matrix: Generated adjacency matrix
+    """
+    # Initialize the adjacency matrix
+    adjacency_matrix = np.zeros((size, size), dtype=int)
+
+    # Fill the adjacency matrix with edge data
+    for edge in Edge:
+        adjacency_matrix[edge[0]][edge[1]] = 1
+
+    # If sel is True, set the diagonal to 1
+    if sel:
+        np.fill_diagonal(adjacency_matrix, 1)
+
+    return adjacency_matrix
+
+
+def split_datasets(Node, Edge, target):
+    """
+    Split three datasets (Node, Edge, target) into training and testing sets.
+
+    Parameters:
+    - Node: NumPy array representing the Node dataset
+    - Edge: NumPy array representing the Edge dataset
+    - target: NumPy array representing the target dataset
+
+    Returns:
+    - Node_train, Node_test: Training and testing sets for Node
+    - Edge_train, Edge_test: Training and testing sets for Edge
+    - target_train, target_test: Training and testing sets for target
+    """
+    # Create an index array representing the order of data
+    data_indices = np.arange(len(target))
+
+    # Randomize the index array
+    np.random.shuffle(data_indices)
+
+    # Determine the split point
+    split_point = int(0.8 * len(data_indices))
+
+    # Split the datasets
+    train_indices = data_indices[:split_point]
+    test_indices = data_indices[split_point:]
+
+    # Convert datasets to NumPy arrays
+    Node = np.array(Node)
+    Edge = np.array(Edge)
+    target = np.array(target)
+
+    # Use index arrays to split Node, Edge, and target
+    Node_train, Node_test = Node[train_indices], Node[test_indices]
+    Edge_train, Edge_test = Edge[train_indices], Edge[test_indices]
+    target_train, target_test = target[train_indices], target[test_indices]
+
+    return Node_train, Node_test, Edge_train, Edge_test, target_train, target_test
+
+
+def Laplacian(A):
+    """
+    Compute the normalized Laplacian matrix L = I - D^(-1/2) * A * D^(-1/2).
+
+    Parameters:
+    - A: Input matrix
+
+    Returns:
+    - L: Normalized Laplacian matrix
+    - eigenvalues matrix of L
+    - eigenvectors matrix of L 
+    """
+    # Degree matrix D
+    D = np.diag(np.sum(A, axis=1))
+
+    # Compute D^(-1/2)
+    D_inv_sqrt = np.linalg.inv(np.sqrt(D))
+
+    # Compute L = I - D^(-1/2) * A * D^(-1/2)
+    L = np.identity(A.shape[0]) - np.dot(np.dot(D_inv_sqrt, A), D_inv_sqrt)
+    
+    eigenvaluesMatrix, eigenvectorsMatrix = np.linalg.eig(L)
+
+    return L, eigenvaluesMatrix , eigenvectorsMatrix 

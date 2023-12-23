@@ -5,7 +5,9 @@ from sympy import *
 import numpy as np
 import pandas as pd
 import os
+import re
 from ..XRDSimulation.Simulation import cal_atoms
+from ..Extinction.XRDpre import find_atomic_mass
 
 class VandMFraction:
     def __init__(self, timename): 
@@ -44,7 +46,7 @@ class VandMFraction:
 
     def get_Volome_Fraction(self, structure_factor, crystal_sys_list, Multi_list, HKL_list, Theta_list, Intensity_list, LatticCs_list,Wavelength):
         """
-        Calculation of the crystal volume involved in the diffraction by the structure factor
+        Calculation of the crystal mass involved in the diffraction by the structure factor
         Input the information of the first few strongest peaks, the input format is as follows
         """
         # structure_factor:  ==> [ [['atom1',0,0,0],['atom2',0.5,1,1],.....], [['atom1',0,0,0],['atom2',0.5,1,1],.....]] ==> [System1, System2,...]  fi is the form factor
@@ -59,6 +61,7 @@ class VandMFraction:
             Wavelength = Wavelength[0]
 
         Total_Fraction = np.zeros(len(Multi_list))
+        lattic_mass_set = cal_lattic_mass(structure_factor)
         # for a single peak, calculate the ratio of each peak and take the average
         # for a single crystal system
         for peak in range(len(Multi_list[0])):
@@ -83,6 +86,7 @@ class VandMFraction:
                 Volume.append(float(VolumeFunction.subs(
                     {sym_a: LatticCs_list[system][0], sym_b: LatticCs_list[system][1], sym_c: LatticCs_list[system][2],
                     angle1: LatticCs_list[system][3] * np.pi/180 , angle2: LatticCs_list[system][4] * np.pi/180, angle3: LatticCs_list[system][5] * np.pi/180})))
+            destiny_arr = np.array(lattic_mass_set) / np.array(Volume)
             # without considering the temperature and line absorption factor
             # I = C * V / (V0 ** 2) * F2HKL * P * (1 + cos(2*theta) ** 2) / (sin(theta) **2 * cos(theta))
             # Coef = F2HKL * P * (1 + cos(2*theta) ** 2) / (sin(theta) **2 * cos(theta)) / (V0 ** 2)
@@ -98,25 +102,26 @@ class VandMFraction:
                 Sum += float(Intensity_list[system][peak]/Coef[system])
             """
             Fraction = []  # len == system num
+            # cal multi-peaks
             for system in range(len(crystal_sys_list)):
-                Fraction.append((Intensity_list[system][peak] / Coef[system]))
+                Fraction.append((Intensity_list[system][peak] / Coef[system]) )
             Total_Fraction += np.array(Fraction)  
         
         Average_Fraction = []
         Sum = 0.0
         for system in range(len(Total_Fraction)):
-            Sum += float(Total_Fraction[system])
+            Sum += float(Total_Fraction[system]* destiny_arr[system])
         for system in range(len(Total_Fraction)):
-            Average_Fraction.append(Total_Fraction[system]/Sum * 100)
+            Average_Fraction.append(Total_Fraction[system] * destiny_arr[system]/Sum * 100)
 
-        print('volume fraction based on structure factor in % :', str(Average_Fraction),'\n Saved at the result documents')
-        with open(os.path.join('WPEMFittingResults', 'VolumeFraction_accurate_{year}.{month}.{day}_{hour}.{minute}.txt'.format(year=self.namey,
+        print('Mass fraction based on structure factor in % :', str(Average_Fraction),'\n Saved at the result documents')
+        with open(os.path.join('WPEMFittingResults', 'MassFraction_accurate_{year}.{month}.{day}_{hour}.{minute}.txt'.format(year=self.namey,
                    month=self.nameM, day=self.named, hour=self.nameh,minute=self.namem)), 'w') as wfid:
-            print('The accurately determined volume fraction in % :', file=wfid)
+            print('The accurately determined Mass fraction in % :', file=wfid)
             print(str(Average_Fraction), file=wfid)
 
 
-    def Volome_Fraction_Cal(self, crystal_sys_list, num, EXACT = False):
+    def Volome_Fraction_Cal(self, crystal_sys_list, num, density_set, EXACT):
         """
         This function calculates the volume fraction through the structure factor
         Calculate by selecting the strongest peaks, num is the number of peaks
@@ -145,17 +150,17 @@ class VandMFraction:
 
             Sum = 0.0
             for system in range(len(crystal_sys_list)):
-                Sum += float(Intensity_list[system])
+                Sum += float(Intensity_list[system] * density_set[system])
 
             Fraction = []
             for system in range(len(crystal_sys_list)):
-                Fraction.append(Intensity_list[system] / Sum * 100)
+                Fraction.append(Intensity_list[system] * density_set[system] / Sum * 100)
 
-            print('volume fraction without structure factor estimate in % :', str(Fraction), '\n Saved at the result documents')
+            print('Mass fraction without structure factor estimate in % :', str(Fraction), '\n Saved at the result documents')
             with open(os.path.join('WPEMFittingResults',
-                                   'VolumeFraction_estimate_{year}.{month}.{day}_{hour}.{minute}.txt'.format(year=self.namey,
+                                   'MassFraction_estimate_{year}.{month}.{day}_{hour}.{minute}.txt'.format(year=self.namey,
                                         month=self.nameM,day=self.named,hour=self.nameh,minute=self.namem)),'w') as wfid:
-                print('The estimated volume fraction in % :', file=wfid)
+                print('The estimated Mass fraction in % :', file=wfid)
                 print(str(Fraction), file=wfid)
 
         elif EXACT == True:
@@ -196,10 +201,19 @@ class VandMFraction:
 
 
 
-
-
-
-
-
+def cal_lattic_mass(structure_factor):
+    # structure_factor:  ==> [ [['atom1',0,0,0],['atom2',0.5,1,1],.....], [['atom1',0,0,0],['atom2',0.5,1,1],.....]] ==> [System1, System2,...]
+    total_mass = []
+    for system in range(len(structure_factor)):
+        mass = 0
+        for atom in structure_factor[system]:
+            _a = re.sub(r'[^A-Za-z]+', "", atom[0])
+            result = find_atomic_mass(_a)
+            if result is None:
+                print(f"Element with symbol {_a} not found.")
+                result = 0
+            mass += result
+        total_mass.append(mass)
+    return total_mass
 
 

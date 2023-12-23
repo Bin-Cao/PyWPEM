@@ -6,6 +6,8 @@ from IPython.display import display
 import ipywidgets as widgets
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from ..XRDSimulation.DiffractionGrometry.atom import atomics
+from ipywidgets import interactive, widgets
+from IPython.display import display, HTML
 
 class plotUnitCell(object):
     def __init__(self,atom_coordinatses,lattice_param,):
@@ -21,7 +23,7 @@ class plotUnitCell(object):
         interact_func.children[1].value = 60  
         display(interact_func)
         plt.show()
-
+    
     def sub_plot(self,elevation, azimuth):
         a = self.lattice_param[0]
         b = self.lattice_param[1]

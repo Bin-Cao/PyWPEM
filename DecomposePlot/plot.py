@@ -8,7 +8,7 @@ import os
 
 class Decomposedpeaks():
     # To draw the decomposition peak.
-    def decomposition_peak(self, lowboundary, upboundary, wavelength,name = None, Macromolecule = False,phase = 1,Pic_Title = False):
+    def decomposition_peak(self, lowboundary, upboundary, wavelength, density_list=None, name = None, Macromolecule = False,phase = 1,Pic_Title = False,lifting = None):
         """
         :param lowboundary : float, the smallest diffraction angle studied
 
@@ -16,22 +16,45 @@ class Decomposedpeaks():
 
         :param wavelength : list, the wavelength of the X rays
 
-        :param name : list, assign the name of each crystal through this parameter
+        :param density_list : list default is None, the densities of crytal, can be calculated by fun. WPEM.CIFpreprocess()
+            e.g., 
+            _,_,d1 = WPEM.CIFpreprocess()
+            _,_,d2 = WPEM.CIFpreprocess()
+            density_list = [d1,d2]
+
+        :param name : list,  the name of each crystal through this parameter
 
         :param Macromolecule: whether it contains amorphous, used in amorphous fitting
 
         :param phase: the number of compounds contained in diffraction signals
 
         :param Pic_Title: Whether to display the title of the pictures
+
+        :param lifting : whether to lift the base of each components
         
         """
+        if density_list is not None:
+            self.density_list= density_list # the densities of crytal, can be calculated by fun. WPEM.CIFpreprocess()
+        else:
+            self.density_list = np.ones(phase)
 
-        assign = 0
+        if lifting == None:
+            lifting = []
+            for j in range(phase+1):
+                lifting.append(0)
+        elif type(lifting) == list:
+            if len(lifting) != phase+1:
+                print('User must assigned a lifting constant for each phase')
+            else: pass
+        else:
+            print('type error: %s' % type(lifting), 'must be a list')
+                      
         if name == None:
-            pass
+            name = []
+            for j in range(phase):
+                name.append('phase_%d' % (j+1))
         elif type(name) == list:
             print('Name assigned successfully')
-            assign = True
         else:
             print('Type Error: name must be a list')
 
@@ -130,82 +153,55 @@ class Decomposedpeaks():
                     MaxP_diffraction_intensity = round(MaxP_diffraction_intensity,3)
                     value = round(value,3)
 
-                    
                     plt.xlabel('2\u03b8\u00B0')
                     plt.ylabel('I (a.u.)')
                     if Pic_Title == False:
                         pass
                     else:
                         plt.title('first peak diffraction angle = {angle}, diffraction intensity = {inten} \n System{Task} : [sin(theta)/wavelength] = {value}'.format(angle = MaxP_diffraction_angle, inten = MaxP_diffraction_intensity,Task = i, value = value) , size=12)
-                    
-                    if assign == False:
-                        plt.plot(o_x, total_intens, label="{}".format(name[i]))
-                        for __peak in range(k):
-                            plt.plot(o_x, peak_intens[__peak])
-                        plt.legend()
-                        plt.savefig('./DecomposedComponents/Decomposed_peaks{Task}.png'.format(Task=i), dpi=800)
-                        plt.show()
-                    else: 
-                        plt.plot(o_x, total_intens, label="{}".format(name[i]))
-                        for __peak in range(k):
-                            plt.plot(o_x, peak_intens[__peak])
-                        plt.legend()
-                        plt.savefig('./DecomposedComponents/{Task}.png'.format(Task = name[i]), dpi=800)
-                        plt.show()
+                  
+                    plt.plot(o_x, total_intens, label="{}".format(name[i]))
+                    for __peak in range(k):
+                        plt.plot(o_x, peak_intens[__peak])
+                    plt.legend()
+                    plt.savefig('./DecomposedComponents/{Task}.png'.format(Task = name[i]), dpi=800)
+                    plt.show()
 
-                area = []   # defined for computing the volume fraction of components by the intensity area
+                area = []   # defined for computing the mass fraction of components by the intensity area
                 plt.xlabel('2\u03b8\u00B0')
                 plt.ylabel('I (a.u.)')
                 if Pic_Title == False:
                     pass
                 else:
                     plt.title('Decomposited peaks - all components', size=15)
-                plt.plot(o_x, o_y, label="real intensity")
-                if assign == False:
-                    for l in range(phase):
-                        plt.plot(o_x, DecomposepeaksIntensity[l],label="Decomposed profile of system  {System}".format(System = l))
-                        
+                plt.plot(o_x, o_y+lifting[-1], label="real intensity")
+                
+                for l in range(phase):
+                        plt.plot(o_x, DecomposepeaksIntensity[l]+ lifting[l],label="{System}".format(System = name[l]))
                         # calculate the integral area of each component
                         area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))      
-                    plt.legend()
-                    plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
-                    plt.show()
-                else:
-                    for l in range(phase):
-                            plt.plot(o_x, DecomposepeaksIntensity[l],label="{System}".format(System = name[l]))
-                            # calculate the integral area of each component
-                            area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))      
-                    plt.legend()
-                    plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
-                    plt.show()
+                plt.legend()
+                plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
+                plt.show()
 
-              
-                if assign == False:
-                    # save the 2theta-intensity file of decomposed components
-                    for l in range(phase):
-                        with open(os.path.join('DecomposedComponents','Profile_Decomposed_system{System}.csv'.format(System = l)), 'w') as wfid:
-                            for j in range(len(o_x)):
-                                print(o_x[j], end=', ', file=wfid)
-                                print(float(DecomposepeaksIntensity[l][j]), file=wfid)
-                elif assign == True:
-                    # save the 2theta-intensity file of decomposed components
-                    for l in range(phase):
-                        with open(os.path.join('DecomposedComponents','{System}.csv'.format(System = name[l])), 'w') as wfid:
-                            for j in range(len(o_x)):
-                                print(o_x[j], end=', ', file=wfid)
-                                print(float(DecomposepeaksIntensity[l][j]), file=wfid)
+                # save the 2theta-intensity file of decomposed components
+                for l in range(phase):
+                    with open(os.path.join('DecomposedComponents','{System}.csv'.format(System = name[l])), 'w') as wfid:
+                        for j in range(len(o_x)):
+                            print(o_x[j], end=', ', file=wfid)
+                            print(float(DecomposepeaksIntensity[l][j]), file=wfid)
 
                 Sum = 0.0
                 for system in range(len(area)):
-                    Sum += float(area[system])
+                    Sum += float(area[system]* self.density_list[system])
 
                 Fraction = []
                 for system in range(len(area)):
-                    Fraction.append(area[system] / Sum * 100)
+                    Fraction.append(area[system] * self.density_list[system]/ Sum * 100)
 
-                print('volume fraction estimate in % (calculated by integral area):', str(Fraction), '\n Saved at the DecomposedComponents document')
-                with open(os.path.join('WPEMFittingResults', 'VolumeFraction_estimate_integral_area.txt'), 'w') as wfid:
-                    print('The estimated volume fraction in % :', file=wfid)
+                print('Mass fraction estimate in % (calculated by integral area):', str(Fraction), '\n Saved at the DecomposedComponents document')
+                with open(os.path.join('WPEMFittingResults', 'MassFraction_estimate_integral_area.txt'), 'w') as wfid:
+                    print('The estimated Mass fraction in % :', file=wfid)
                     print(str(Fraction), file=wfid)
             else:
                 print('Input a error type of ', phase)
@@ -366,103 +362,61 @@ class Decomposedpeaks():
                     MaxP_diffraction_intensity = round(MaxP_diffraction_intensity,3)
                     value = round(value,3)
 
-                    if assign == False:
-                        plt.xlabel('2\u03b8\u00B0')
-                        plt.ylabel('I (a.u.)')
-                        if Pic_Title == False:
-                            pass
-                        else:
-                            plt.title(' First peak diffraction angle = {angle}, diffraction intensity = {inten} \n System{Task} : [sin(theta)/wavelength] = {value}'.format(angle = MaxP_diffraction_angle, inten = MaxP_diffraction_intensity,Task = i, value = value) , size=12)
-                        plt.plot(o_x, total_intens, label="Fitted profile of System{Task}".format(Task=i))
-
-                        for __peak in range(k):
-                            plt.plot(o_x, peak_intens[__peak])
-                        plt.legend()
-                        plt.savefig('./DecomposedComponents/Decomposed_peaks{Task}.png'.format(Task=i), dpi=800)
-                        plt.show()
-                    elif assign == True:
-                        plt.xlabel('2\u03b8\u00B0')
-                        plt.ylabel('I (a.u.)')
-                        if Pic_Title == False:
-                            pass
-                        else:
-                            plt.title(' First peak diffraction angle = {angle}, diffraction intensity = {inten} \n {Task} : [sin(theta)/wavelength] = {value}'.format(angle = MaxP_diffraction_angle, inten = MaxP_diffraction_intensity,Task = name[i], value = value) , size=12)
-                        plt.plot(o_x, total_intens, label="{Task}".format(Task=name[i]))
-                    
-                        for __peak in range(k):
-                            plt.plot(o_x, peak_intens[__peak])
-                        plt.legend()
-                        plt.savefig('./DecomposedComponents/{Task}.png'.format(Task=name[i]), dpi=800)
-                        plt.show()
-
-                if assign == False:
-                    area = []   # defined for computing the volume fraction of components by the intensity area
+                   
                     plt.xlabel('2\u03b8\u00B0')
                     plt.ylabel('I (a.u.)')
                     if Pic_Title == False:
                         pass
                     else:
-                        plt.title('Decomposited peaks - all components', size=15)
-                    plt.plot(o_x, o_y, label="Real intensity")
-                    for l in range(phase):
-                        plt.plot(o_x, DecomposepeaksIntensity[l],label="Decomposed profile of system  {System}".format(System = l))
-                        # calculate the integral area of each component
-                        area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))
-
-                    # save the 2theta-intensity file of decomposed components
-                    for l in range(phase):
-                        with open(os.path.join('DecomposedComponents','Profile_Decomposed_system{System}.csv'.format(System = l)), 'w') as wfid:
-                            for j in range(len(o_x)):
-                                print(o_x[j], end=', ', file=wfid)
-                                print(float(DecomposepeaksIntensity[l][j]), file=wfid)
-                            
-                                
-                    plt.plot( Amorphous_f_x,  Amorphous_f_y, linestyle='--',linewidth=2.5, c='k',label=" Amorphous profile")
-                    for i in range(_k):
-                        plt.plot(Amorphous_f_x, Amorphous_peak_intens[i],linestyle='--', c='b',linewidth=1.5,)
-                    plt.legend()    
-                    plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
+                        plt.title(' First peak diffraction angle = {angle}, diffraction intensity = {inten} \n {Task} : [sin(theta)/wavelength] = {value}'.format(angle = MaxP_diffraction_angle, inten = MaxP_diffraction_intensity,Task = name[i], value = value) , size=12)
+                    plt.plot(o_x, total_intens, label="{Task}".format(Task=name[i]))
+                
+                    for __peak in range(k):
+                        plt.plot(o_x, peak_intens[__peak])
+                    plt.legend()
+                    plt.savefig('./DecomposedComponents/{Task}.png'.format(Task=name[i]), dpi=800)
                     plt.show()
-                elif assign == True:
-                    area = []   # defined for computing the volume fraction of components by the intensity area
-                    plt.xlabel('2\u03b8\u00B0')
-                    plt.ylabel('I (a.u.)')
-                    if Pic_Title == False:
-                        pass
-                    else:
-                        plt.title('Decomposited peaks - all components', size=15)
-                    plt.plot(o_x, o_y, label="Real intensity")
-                    for l in range(phase):
-                        plt.plot(o_x, DecomposepeaksIntensity[l],label=" {System}".format(System = name[l]))
-                        # calculate the integral area of each component
-                        area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))
 
-                    # save the 2theta-intensity file of decomposed components
-                    for l in range(phase):
-                        with open(os.path.join('DecomposedComponents','{System}.csv'.format(System = name[l])), 'w') as wfid:
-                            for j in range(len(o_x)):
-                                print(o_x[j], end=', ', file=wfid)
-                                print(float(DecomposepeaksIntensity[l][j]), file=wfid)
+                
+                area = []   # defined for computing the mass fraction of components by the intensity area
+                plt.xlabel('2\u03b8\u00B0')
+                plt.ylabel('I (a.u.)')
+                if Pic_Title == False:
+                    pass
+                else:
+                    plt.title('Decomposited peaks - all components', size=15)
+                plt.plot(o_x, o_y+lifting[-1], label="Real intensity")
+                for l in range(phase):
+                    plt.plot(o_x, DecomposepeaksIntensity[l]+ lifting[l],label=" {System}".format(System = name[l]))
+                    # calculate the integral area of each component
+                    area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))
+
+                # save the 2theta-intensity file of decomposed components
+                for l in range(phase):
+                    with open(os.path.join('DecomposedComponents','{System}.csv'.format(System = name[l])), 'w') as wfid:
+                        for j in range(len(o_x)):
+                            print(o_x[j], end=', ', file=wfid)
+                            print(float(DecomposepeaksIntensity[l][j]), file=wfid)
+                        
                             
-                                
-                    plt.plot( Amorphous_f_x,  Amorphous_f_y, linestyle='--',linewidth=2.5, c='k',label="Amorphous profile")
-                    for i in range(_k):
-                        plt.plot(Amorphous_f_x, Amorphous_peak_intens[i],linestyle='--', c='b',linewidth=1.5,)
-                    plt.legend()    
-                    plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
-                    plt.show()
+                plt.plot( Amorphous_f_x,  Amorphous_f_y, linestyle='--',linewidth=2.5, c='k',label="Amorphous profile")
+                for i in range(_k):
+                    plt.plot(Amorphous_f_x, Amorphous_peak_intens[i],linestyle='--', c='b',linewidth=1.5,)
+                plt.legend()    
+                plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
+                plt.show()
 
                 Sum = 0.0
                 for system in range(len(area)):
-                    Sum += float(area[system])
+                    Sum += float(area[system] * self.density_list[system])
 
                 Fraction = []
                 for system in range(len(area)):
-                    Fraction.append(area[system] / Sum * 100)
+                    Fraction.append(area[system] * self.density_list[system] / Sum * 100)
 
-                print('volume fraction estimate in % (calculated by integral area):', str(Fraction), '\n Saved at the WPEMFittingResults')
-                with open(os.path.join('WPEMFittingResults', 'VolumeFraction_estimate_integral_area.txt'), 'w') as wfid:
-                    print('The estimated volume fraction in % :', file=wfid)
+                print('Mass fraction estimate in % (calculated by integral area):', str(Fraction), '\n Saved at the WPEMFittingResults')
+                with open(os.path.join('WPEMFittingResults', 'MassFraction_estimate_integral_area.txt'), 'w') as wfid:
+                    print('The estimated Mass fraction in % :', file=wfid)
                     print(str(Fraction), file=wfid)
                 
                 # cal relative bulk crystallinity

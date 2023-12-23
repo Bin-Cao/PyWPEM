@@ -3,6 +3,7 @@
 
 import copy
 import csv
+from tqdm import tqdm
 from itertools import chain
 import numpy as np
 import pandas as pd
@@ -29,10 +30,10 @@ Contribution and suggestions are always welcome. You can also contact the author
 class WPEMsolver(object):
     def __init__(
         self,wavelength,Var,asy_C,s_angle,subset_number, low_bound,up_bound,
-        lattice_constants,singal,no_bac_intensity_file,original_file,bacground_file,two_theta_range,
+        lattice_constants,density_list,singal,no_bac_intensity_file,original_file,bacground_file,two_theta_range,
         initial_peak_file,bta, bta_threshold,limit, iter_limit,w_limit,iter_max,
         lock_num,structure_factor, MODEL, InitializationEpoch,Macromolecule,cpu,num, EXACT,Cu_tao,
-        loadParams,
+        loadParams, ZeroShift
 
     ):
         self.wavelength = wavelength # wavelength
@@ -43,6 +44,10 @@ class WPEMsolver(object):
         self.low_bound = low_bound # the lower boundary of the selected peaks at Bragg step
         self.up_bound = up_bound # the upper boundary of the selected peaks at Bragg step
         self.Lattice_constants = lattice_constants # lattice constants
+        if density_list is not None:
+            self.density_list= density_list # the densities of crytal, can be calculated by fun. WPEM.CIFpreprocess()
+        else:
+            self.density_list = np.ones(len(lattice_constants))
         self.singal = singal # whether to allow Bragg step adjustment
         self.no_bac_intensity_file = no_bac_intensity_file # crystal diffraction intensity 
         self.original_file = original_file # experimental observation intensity
@@ -61,11 +66,12 @@ class WPEMsolver(object):
         self.IniEpoch = InitializationEpoch # Initialization epoch
         self.Macromolecule = Macromolecule # Boolean default = False, for profile fitting of crystals. True for macromolecules.
         self.cpu = cpu # parallel computatis CPU core numerus
-        self.num = num # the number of the strongest peaks used in calculating volume fraction
-        self.EXACT = EXACT # Boolean default = False, True for exact calculation of volume fraction by diffraction intensity theory
+        self.num = num # the number of the strongest peaks used in calculating mass fraction
+        self.EXACT = EXACT # Boolean default = False, True for exact calculation of mass fraction by diffraction intensity theory
         self.Cu_tao = Cu_tao # for limitting the relationship between the ray diffraction intensities of copper Ka1 and Ka2
         self.loadParams = loadParams # if read in the initial parameters
-
+        self.ZeroShift = ZeroShift # If a standard sample is available, the instrument offset can be calibrated
+        
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
         plt.rcParams['font.size'] = 12
@@ -166,6 +172,16 @@ class WPEMsolver(object):
                 i_ln = 2 * i
                 i_w_cal.append(w_list[i_ln] + w_list[i_ln + 1])     
                 a_n_list.append(w_list[i_ln] / i_w_cal[i])
+
+            if self.ZeroShift == True:
+                print('='*60)
+                top_indices = np.argpartition(i_w_cal, -6)[-6:]
+                peaks = np.array(p1_list)[top_indices]
+                peak_array = pd.read_csv('peak0.csv')['2theta/TOF']
+                ref_peaks = peak_array[top_indices]
+                offset = sum(ref_peaks - peaks) / 6
+                print('The instrument offset is:', offset)
+                print('='*60)
 
             y1 = [] # γi
             y2 = [] # σi^2
@@ -422,16 +438,16 @@ class WPEMsolver(object):
                                 print(task_intensity[j], end=',', file=wfid)
                                 print(gam_list_match[j], end=',', file=wfid)
                                 print(sig_list_match[j], file=wfid)
-
+        
             if self.EXACT == False:
-                VFD.Volome_Fraction_Cal(crystal_sys_set,self.num, EXACT=False)
+                VFD.Volome_Fraction_Cal(crystal_sys_set,self.num, self.density_list, EXACT=False)
             elif self.EXACT == True:
                 if self.structure_factor != None:
-                    Mult_list, HKL_list, Theta_list, Intensity_list = VFD.Volome_Fraction_Cal(crystal_sys_set,self.num, EXACT=True)
+                    Mult_list, HKL_list, Theta_list, Intensity_list = VFD.Volome_Fraction_Cal(crystal_sys_set,self.num,self.density_list, EXACT=True)
                     VFD.get_Volome_Fraction(self.structure_factor, crystal_sys_set, Mult_list, HKL_list, Theta_list,
                                             Intensity_list, ini_CL,self.wavelength,)
                 else:
-                    print('If you want to get the accurately determined of volume fraction, Please input the structure factor!')
+                    print('If you want to get the accurately determined of mass fraction, Please input the structure factor!')
             else:
                 print('Type Error \'EXACT\'')
             return Rp, Rwp, i_ter, flag
@@ -490,7 +506,7 @@ class WPEMsolver(object):
         k_ln = int(len(ini_p1_list))
         # total number of sub-peaks, one PV peaks contains two sub-peaks
         k = k_ln * 2
-        # the total value of all peak's intensity
+        # the total value of all position's intensity
         n_all = sum(intensity)
         # for iterating 
         new_w_list = copy.deepcopy(ini_w_list)
@@ -512,7 +528,7 @@ class WPEMsolver(object):
         # If the likelihood value drops multiple times in a row, stop the iteration
         lock = 0
         # Enter the EM-Bragg iteration
-        while (True):
+        for iteration in tqdm(range(self.iter_max)):
             w_list = copy.deepcopy(new_w_list)
             p1_list = copy.deepcopy(mui_abc)
             p2_list = copy.deepcopy(new_p2_list)
@@ -634,6 +650,7 @@ class WPEMsolver(object):
             if log_likelihood[-1] < log_likelihood[-2]:
                 lock += 1
 
+            flag = -1
             # Determine the convergence type and return
             if abs(log_likelihood[-1] - log_likelihood[-2]) <= self.iter_limit:
                 flag = 1
@@ -748,8 +765,8 @@ class WPEMsolver(object):
         print('After update the background :  ',
               'Rp = %.3f' % (p_error_sum / obs * 100) + ' | Rwp = %.3f' % (np.sqrt(wp_error_sum / obs) * 100) + ' | Rsquare = %.3f' % (Rsquare(y, i_obser)))
 
-        plt.plot(two_theta, inten_upbac, '-g', label="Experimental Profile (crystal)", )
-        plt.plot(two_theta, i_calc, 'b', label="WPEM fitting profile",)
+        plt.plot(two_theta, inten_upbac+bac_up, '-k', label="Experimental Profile (crystal)", )
+        plt.plot(two_theta, i_calc+bac_up, 'g', linestyle='--',label="WPEM fitting profile",)
         plt.xlabel('2\u03b8\u00B0')
         plt.ylabel('I (a.u.)')
         plt.legend()
@@ -782,6 +799,9 @@ class WPEMsolver(object):
                     day=named, hour=nameh, minute=namem), dpi=800)
         plt.show()
         plt.clf()
+
+        if flag == -1:
+            flag = 3
 
         return new_w_list, p1_list, new_p2_list, i_ter, flag, ini_LC, mui_abc_set, i_calc, bac_up, Rp[-1], Rwp[-1], _Rsquare[-1], crystal_sys_set
 
