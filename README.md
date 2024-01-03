@@ -17,7 +17,7 @@
 PyWPEM/
     __init__.py
     WPEM.py
-    Extinction/
+    Extinction/ 
         __init__.py
         CifReader.py
         XRDpre.py
@@ -57,6 +57,22 @@ PyWPEM/
         Decompose/
             __init__.py
             RamanFitting.py
+    WPEMXAS/
+            __init__.py
+            EXAFS.py
+            fftdemo.ipynb
+    WPEMXPS/
+            __init__.py
+            XPSEM.py
+    Plot/
+            __init__.py
+            UnitCell.py
+    StructureOpt/
+            __init__.py
+            SiteOpt.py
+    GraphStructure/
+            __init__.py
+            graph.py
 ``` 
 
 ## Tables
