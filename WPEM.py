@@ -505,16 +505,16 @@ def ToAdj(Edge, size, sel=False):
 
     # Fill the adjacency matrix with edge data
     for edge in Edge:
-        adjacency_matrix[edge[0]][edge[1]] = 1
+        adjacency_matrix[edge[0]][edge[1]] += 1
 
     # If sel is True, set the diagonal to 1
     if sel:
-        np.fill_diagonal(adjacency_matrix, 1)
+        adjacency_matrix = adjacency_matrix + np.eye(size, dtype=int)
 
     return adjacency_matrix
 
 
-def split_datasets(Node, Edge, target):
+def split_datasets(Node, Edge, target, ratio =0.2):
     """
     Split three datasets (Node, Edge, target) into training and testing sets.
 
@@ -535,7 +535,7 @@ def split_datasets(Node, Edge, target):
     np.random.shuffle(data_indices)
 
     # Determine the split point
-    split_point = int(0.8 * len(data_indices))
+    split_point = int((1-ratio) * len(data_indices))
 
     # Split the datasets
     train_indices = data_indices[:split_point]
@@ -575,6 +575,8 @@ def Laplacian(A):
     # Compute L = I - D^(-1/2) * A * D^(-1/2)
     L = np.identity(A.shape[0]) - np.dot(np.dot(D_inv_sqrt, A), D_inv_sqrt)
     
-    eigenvaluesMatrix, eigenvectorsMatrix = np.linalg.eig(L)
+    L_reg = L + 1e-5 * np.identity(A.shape[0])
+    eigenvaluesMatrix, eigenvectorsMatrix = np.linalg.eig(L_reg)
+    eigenvaluesMatrix = np.diag(eigenvaluesMatrix)
 
-    return L, eigenvaluesMatrix , eigenvectorsMatrix 
+    return L_reg, eigenvaluesMatrix.real , eigenvectorsMatrix.real

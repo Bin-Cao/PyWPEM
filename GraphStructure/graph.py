@@ -329,13 +329,12 @@ def find_nearest_neighbors(input_coordinates,lattice,supercell=None):
                 # find nearest neighbor qual atom at the original lattice cell 
                 nearest_indices = [index for index, element in enumerate(original_cell_cart) if are_arrays_equal(element, _nearest_atom)]
                 if nearest_indices:
-                    nearest_neighbors.append([i,nearest_indices]) 
+                    nearest_neighbors.append([i,nearest_indices[0]]) 
                 else : 
                     _distances = [calculate_distance(_nearest_atom, original_cell_cart[j]) for j in range(len(original_cell_cart))]
                     nearest_neighbors.append([i,np.argmin(_distances)])  
                   
-
-    return nearest_neighbors
+    return nearest_neighbors 
 
 def fractional_to_cartesian(fractional_coordinates, lattice_vectors):
     return np.dot(fractional_coordinates, lattice_vectors)
