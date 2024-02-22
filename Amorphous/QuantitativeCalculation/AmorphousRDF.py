@@ -3,6 +3,7 @@
 
 import pandas as pd
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 
 class RadialDistribution(object):
@@ -16,28 +17,44 @@ class RadialDistribution(object):
         plt.rcParams['font.family'] = 'sans-serif'
         plt.rcParams['font.size'] = 12 
 
-    def RDF(self,density_zero=None,NAa=None,highlight= 4,value=0.6):
+    def RDF(self,amor_file=None,density_zero=None,Nf2=None,highlight= 4,value=0.6):
+        os.makedirs('DecomposedComponents', exist_ok=True)
         # density_zero : the average density of the sample in atoms per cc.
-        # NAa : N is the effective number of atoms in the sample ; Aa is the atom scatter intensity
+        # Nf2 : N is the effective number of atoms in the sample ; Aa is the atom scatter intensity
         # value : assuming that the scattering can be taken as independent at sin(theta/lamda) =0.6,
-        data = pd.read_csv("./DecomposedComponents/Amorphous.csv", header=None, names=['ang','int'])
-        b_data = pd.read_csv("./DecomposedComponents/M_background_amorphous_stripped.csv", header=None, names=['ang','int'])
+        if amor_file == None:
+            data = pd.read_csv("./DecomposedComponents/Amorphous.csv", header=None, names=['ang','int'])
+            b_data = pd.read_csv("./DecomposedComponents/M_background_amorphous_stripped.csv", header=None, names=['ang','int'])
+        else : 
+            data = pd.read_csv(amor_file, header=None, names=['ang','int'])
+        
         if self.wavelength*value > 1:
             print('The input value must be smaller than % f' % 1/self.wavelength*value)
+
+        # Define the high angle and intercept the K value
         angle = np.arcsin(self.wavelength*value) * 180 / np.pi
         
         # N is the effective number of atoms in the sample
         # Aa is the atom scatter intensity
-        # at large angles of scattering I(k) approaches NAa
-        if NAa == None:
+        # at large angles of scattering I(k) approaches Nf2
+        if Nf2 == None:
             # ref :
-            for p in range(len(b_data.ang)):
-                if b_data.ang[p]>= angle:
-                    NAa = b_data.int[p:].mean() -  (b_data.int[p:]).min()
-                    print('NAa = {NAa}, is evaluated at angel {angle}'.format(NAa= NAa, angle = angle))
-                    break
+            if amor_file == None:
+                # read from the amorphous background 
+                for idx, ang_value in enumerate(b_data.ang):
+                    if ang_value >= angle:
+                        mean_int = b_data.int[idx:].mean()
+                        print('Nf2 = {Nf2}, is evaluated at angel {angle}'.format(Nf2= mean_int, angle = angle))
+                        break
+
+            else:
+                for idx, ang_value in enumerate(data.ang):
+                    if ang_value >= angle:
+                        mean_int = data.int[idx:].mean()
+                        print('Nf2 = {Nf2}, is evaluated at angel {angle}'.format(Nf2= mean_int, angle = angle))
+                        break
         else:
-            NAa = NAa
+            Nf2 = Nf2
 
         plt.xlabel('2\u03b8\u00B0', )
         plt.ylabel('I (a.u.)')
@@ -48,38 +65,41 @@ class RadialDistribution(object):
         plt.clf()
 
         k = 4 * np.pi / self.wavelength * np.sin(data.ang/2)
-        # 𝑖(𝑘)𝑘
-        int_k = (data.int / NAa -1) * k
+        # 𝑖(𝑘)𝑘 ； k(I(k)-1)
+        # reduced interference function
+        int_k = (data.int / Nf2 -1) * k
 
         r = np.arange(0,self.r_max,0.01)
         RDF_r_list = []
         for i in r:
             RDF_r = cal_RDF(k, int_k, i)
             RDF_r_list.append(RDF_r)
-        if density_zero == None:
-            circle_x, circle_y, dis= peak_detect(r,RDF_r_list,highlight)
-            plt.xlabel('r/A\u00b0', )
-            plt.ylabel('RDF(r)', )
-            plt.plot(r, RDF_r_list,label="4Pir\u00b2Pu(r)-4Pir\u00b2Pu\u2080(r)")
-            plt.axhline(0.0, color='r', linestyle='--',)
-            plt.scatter(circle_x,circle_y, color='white', marker='o', edgecolors='g', s=200)
-            plt.legend()
-            plt.savefig('./DecomposedComponents/RDF.png', dpi=800)
-            plt.show()
-            plt.clf()
-        elif type(density_zero) == float or type(density_zero) == int:   
-            plt.xlabel('r/A\u00b0',)
-            plt.ylabel('RDF(r)', )
-            base = 4 * np.pi * r**2 * density_zero
-            circle_x, circle_y, dis= peak_detect_based(r,RDF_r_list,base,highlight)
-            plt.plot(r, base,label="4Pir\u00b2Ru\u2080(r)")
-            plt.plot(r, RDF_r_list+ base,label="4Pir\u00b2Ru(r)")
-            plt.axhline(0.0, color='r', linestyle='--',)
-            plt.scatter(circle_x,circle_y, color='white', marker='o', edgecolors='g', s=200)
-            plt.legend()
-            plt.savefig('./DecomposedComponents/RDF_hasbase.png', dpi=800)
-            plt.show()
-            plt.clf()
+        
+        circle_x, circle_y, dis= peak_detect(r,RDF_r_list,highlight)
+        plt.xlabel('r/A\u00b0', )
+        plt.ylabel('RDF(r)', )
+        plt.plot(r, RDF_r_list,color='k',label="4Pir\u00b2Pu(r)-4Pir\u00b2Pu\u2080(r)")
+        plt.axhline(0.0, color='b', linestyle='--',)
+        plt.scatter(circle_x,circle_y, color='white', marker='o', edgecolors='g', s=200)
+        plt.legend()
+        plt.savefig('./DecomposedComponents/RDF.png', dpi=800)
+        plt.savefig('./DecomposedComponents/RDF.svg', dpi=800)
+        plt.show()
+        plt.clf()
+        if density_zero == None: density_zero =40,
+        elif type(density_zero) == float or type(density_zero) == int: pass
+        plt.xlabel('r/A\u00b0',)
+        plt.ylabel('RDF(r)', )
+        base = 4 * np.pi * r**2 * density_zero
+        circle_x, circle_y, dis= peak_detect_based(r,RDF_r_list,base,highlight)
+        plt.plot(r, base, color='b',linestyle='--',label="4Pir\u00b2Ru\u2080(r)")
+        plt.plot(r, RDF_r_list+ base,color='k',label="4Pir\u00b2Ru(r)")
+        plt.scatter(circle_x,circle_y, color='white', marker='o', edgecolors='g', s=200)
+        plt.legend()
+        plt.savefig('./DecomposedComponents/RDF_hasbase.png', dpi=800)
+        plt.savefig('./DecomposedComponents/RDF_hasbase.svg', dpi=800)
+        plt.show()
+        plt.clf()
 
         print('interatomic distances is %f A\u00b0' % np.round(dis,3))
 
@@ -148,7 +168,7 @@ def peak_detect_based(r,RDF_r_list,base, highlight):
         circle_y.append(RDF_r_list[index] + base[index])
         circle_x.append(r[index])
 
-    return circle_x, circle_y, circle_x[2]-circle_x[0]
+    return circle_x, circle_y,circle_x[2]-circle_x[0]
 
 
 

@@ -205,24 +205,38 @@ def fwhm_find(p, p_1, intensity_i, intensity, two_theta):
 
     
 # The asymmetry model
-def intensity_as(p1, theta, asy_C):
-    # Calculate the difference between theta and p1
-    t = (theta - p1)
-    # Determine the sign of t
-    if t < 0:
-        sign = -1
-    elif t > 0:
-        sign = 1
-    else:
-        sign = 0 
+def intensity_as(p1, theta, asy_C,model):
+    """
+    p1 : peak location
+    theta : x-axis
+    """
+    if model == 'XRD':
+        # Calculate the difference between theta and p1
+        t = (theta - p1)
+        # Determine the sign of t
+        if t < 0:
+            sign = -1
+        elif t > 0:
+            sign = 1
+        else:
+            sign = 0 
+    elif model == 'XPS':
+        t = (theta - p1)
+        # Determine the sign of t
+        if t > 0:
+            sign = -1
+        elif t < 0:
+            sign = 1
+        else:
+            sign = 0 
     # Calculate the asymmetry correction factor
-    p_as = 1 - asy_C * sign * (t ** 2) / np.tan(p1 / 180 * np.pi)
+    p_as = 1 - asy_C * sign * (t ** 2) 
     return p_as
 
 
 #  Based on Bayesian theory, the posterior probability of latent variables (αji and βji) are calculated.
 #  Calculate the coefficient as asymmetry correction
-def gamma_ji_list(x_list, w_list, p1_list, p2_list,s_angle,asy_C):
+def gamma_ji_list(x_list, w_list, p1_list, p2_list,s_angle,asy_C,model='XRD'):
     """
     ref: https://github.com/Bin-Cao/MPhil_SHU/tree/main/thesis_BInCAO formula (2.23)
 
@@ -245,8 +259,12 @@ def gamma_ji_list(x_list, w_list, p1_list, p2_list,s_angle,asy_C):
     for i in range(k_ln):
         pi_index = p_index(x_list, p1_list[i])
         for j in range(m):
-            if p1_list[i] <= s_angle and abs(j - pi_index) <= (2 * m / k_ln):
-                p_as_ji[j][i] = intensity_as(p1_list[i], x_list[j],asy_C)
+            if model == 'XRD':
+                if p1_list[i] <= s_angle and abs(j - pi_index) <= (2 * m / k_ln):
+                    p_as_ji[j][i] = intensity_as(p1_list[i], x_list[j],asy_C,model)
+            elif model == 'XPS':
+                if check_in_intervals(p1_list[i],s_angle) and abs(j - pi_index) <= (2 * m / k_ln):
+                    p_as_ji[j][i] = intensity_as(p1_list[i], x_list[j],asy_C,model)
     for j in range(m):
         for i in range(k_ln):
             i_l = i * 2
@@ -260,6 +278,19 @@ def gamma_ji_list(x_list, w_list, p1_list, p2_list,s_angle,asy_C):
         for i_l in range(k_ln):
             gamma_ji_l[j][i_l] = numerator_l[i_l] / denominator
     return gamma_ji, gamma_ji_l, p_as_ji
+
+def check_in_intervals(x, intervals):
+    if len(intervals) == 1 and isinstance(intervals[0], list):
+        if intervals[0][0] <= x <= intervals[0][1]:
+            return True
+    elif len(intervals) == 2 and not isinstance(intervals[0], list):
+        if intervals[0] <= x <= intervals[1]:
+            return True
+    else:
+        for interval in intervals:
+            if interval[0] <= x <= interval[1]:
+                return True
+    return False
 
 # The diffraction peak positions obtained by EM algorithm are sorted in a certain order
 def get_angle_sort(mui_cal_em_list, mui_abc_list):

@@ -1,7 +1,8 @@
 # XRD simulation for a sigle crystal 
 # Author: Bin CAO <binjacobcao@gmail.com>
 
-from sympy import *
+import sympy
+from sympy import symbols, cos, sin
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ import os
 import re
 import random
 import math
+import itertools
 from scipy.special import wofz
 from ..Extinction.XRDpre import profile
 from .DiffractionGrometry.atom import atomics
@@ -25,6 +27,10 @@ class XRD_profile(object):
         # CSWPEMout: Crystal System WPEMout file
 
         # PeakWidth=False: The peak width of the simulated peak is set to 0.
+        
+        # ReSolidSolution : list, default None
+            If not None, should contain the original atom type and replace atom type
+            e.g., ReSolidSolution = ['Ru4+', 'Na2+'], means 'Na2+' replaces the 'Ru4+' atom locations
 
         # PeakWidth=True: The peak width of the simulated peak is set to the peak obtained by WPEM.
 
@@ -128,14 +134,15 @@ class XRD_profile(object):
 
         if self.ReSolidSolution == None: 
             _Atom_coordinate = self.Atom_coordinate
-            print(_Atom_coordinate)
             Latticematrix = lattice_parameters_to_matrix(self.LatticCs[0], self.LatticCs[1], self.LatticCs[2], self.LatticCs[3], self.LatticCs[4], self.LatticCs[5])
-            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), './Simulation_WPEM/SolidSolu.vasp',)
+            print("The nearest neighbor atoms are :",find_closest_atoms(group_elements_by_first_element(_Atom_coordinate), Latticematrix))
+            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), './Simulation_WPEM/CrySits_{}.vasp'.format(self.filepath[-11:-4]))
             
         elif type(self.ReSolidSolution) == list: 
             _Atom_coordinate = ReplaceAtom(self.Atom_coordinate,self.ReSolidSolution,self.RSSratio,Vacancy, Vacancy_atom, Vacancy_ratio,self.LatticCs,seed)
             Latticematrix = lattice_parameters_to_matrix(self.LatticCs[0]*self.PeriodicArr[0], self.LatticCs[1]*self.PeriodicArr[1], self.LatticCs[2]*self.PeriodicArr[2], self.LatticCs[3], self.LatticCs[4], self.LatticCs[5])
-            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), './Simulation_WPEM/SolidSolu.vasp',self.PeriodicArr)
+            print("The nearest neighbor atoms are :",find_closest_atoms(group_elements_by_first_element(_Atom_coordinate), Latticematrix))
+            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), './Simulation_WPEM/CrySits_{}.vasp'.format(self.filepath[-11:-4]),self.PeriodicArr)
         
         else: print("ReSolidSolution is not a list")
         FHKL_square = [] # [FHKL2_1, FHKL2_2,...] a list has the same length with HKL_list
@@ -177,7 +184,6 @@ class XRD_profile(object):
                         * (1 + np.cos(self.mu_list[angle] * np.pi/180) ** 2) / (np.sin(self.mu_list[angle] / 2 * np.pi/180) **2 * np.cos(self.mu_list[angle] / 2 * np.pi/180))))
         
         # augmentation
-        
         if orientation is not None and thermo_vib is None:
             Ints = []
             for k in range(len(_Ints)):
@@ -392,17 +398,17 @@ def LatticVolume(crystal_system):
         if crystal_system == 1:  # Cubic
             Volume = sym_a ** 3
         elif crystal_system == 2:  # Hexagonal
-            Volume = sym_a ** 2 * sym_c * np.sqrt(3) / 2
+            Volume = sym_a ** 2 * sym_c * sympy.sqrt(3) / 2
         elif crystal_system == 3:  # Tetragonal
             Volume = sym_a * sym_a * sym_c
         elif crystal_system == 4:  # Orthorhombic
             Volume = sym_a * sym_b * sym_c
         elif crystal_system == 5:  # Rhombohedral
-            Volume = sym_a ** 3 * np.sqrt(1 - 3 * cos(angle1) ** 2 + 2 * cos(angle1) ** 3)
+            Volume = sym_a ** 3 * sympy.sqrt(1 - 3 * cos(angle1) ** 2 + 2 * cos(angle1) ** 3)
         elif crystal_system == 6:  # Monoclinic
             Volume = sym_a * sym_b * sym_c * sin(angle2)
         elif crystal_system == 7:  # Triclinic
-            Volume = sym_a * sym_b * sym_c * np.sqrt(1 - cos(angle1) ** 2 - cos(angle2) **2
+            Volume = sym_a * sym_b * sym_c * sympy.sqrt(1 - cos(angle1) ** 2 - cos(angle2) **2
                                               - cos(angle3) ** 2 + 2 * cos(angle1) * cos(angle2) * cos(angle3))
         else:
             Volume = -1
@@ -545,6 +551,7 @@ def lattice_parameters_to_matrix(a, b, c, alpha, beta, gamma):
     return lattice_matrix
 
 
+
 def write_vasp_file(matrix, atom, filename,PeriodicArr=[1,1,1]):
     with open(filename, 'w') as file:
         atom_count = count_atoms(atom)
@@ -584,3 +591,18 @@ def group_elements_by_first_element(input_list):
     for key in result:
         output_list += result[key]
     return output_list
+
+def find_closest_atoms(atom_data, latticeMatrix):
+    min_distance = float('inf')
+    closest_atoms = []
+
+    for pair in itertools.combinations(atom_data, 2):
+        atom1, coord1 = pair[0][0], pair[0][1:]
+        atom2, coord2 = pair[1][0], pair[1][1:]
+       
+        dist = distance(np.dot(coord1,latticeMatrix), np.dot(coord2,latticeMatrix) )
+        if dist < min_distance:
+            min_distance = dist
+            closest_atoms = [atom1, atom2, np.round(dist,4)]
+
+    return closest_atoms

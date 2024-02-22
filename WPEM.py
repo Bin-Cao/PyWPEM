@@ -1,11 +1,4 @@
-"""
-██╗    ██╗██████╗ ███████╗███╗   ███╗
-██║    ██║██╔══██╗██╔════╝████╗ ████║
-██║ █╗ ██║██████╔╝█████╗  ██╔████╔██║
-██║███╗██║██╔═══╝ ██╔══╝  ██║╚██╔╝██║
-╚███╔███╔╝██║     ███████╗██║ ╚═╝ ██║
- ╚══╝╚══╝ ╚═╝     ╚══════╝╚═╝     ╚═╝                                                  
-
+"""                                    
 module WPEM: The main call interface of WPEM, including the following functions and subroutines.
 
 Author: Bin CAO <binjacobcao@gmail.com>
@@ -75,6 +68,8 @@ XRDSimulation:
         :param filepath (str): file path of the cif file to be calculated
     output:
         files
+
+... developing
 """
 
 from .EMBraggOpt.EMBraggSolver import WPEMsolver
@@ -268,9 +263,10 @@ def FileTypeCovert(file_name):
     module = TwiceFilter()
     return module.convert_file(file_name)
 
-def Amorphous_fit(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
+def Amorphous_fit(mix_component,amor_file = None, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
     """
     :param mix_component : the number of amorphous peaks 
+    :param amor_file : the amorphous file locatio
     :param ang_range : default is None
         two theta range of study, e.g., ang_range = (20,80)
     :param sigma2_coef : default is 0.5
@@ -285,11 +281,11 @@ def Amorphous_fit(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter =
         peak_location = [20,30,40,'fixed']
     : param Wavelength : Wavelength of ray, default is 1.54184 (Cu)
     """
-    return Amorphous_fitting(mix_component, ang_range, sigma2_coef, max_iter, peak_location,Wavelength)
+    return Amorphous_fitting(mix_component, amor_file,ang_range, sigma2_coef, max_iter, peak_location,Wavelength)
 
-def AmorphousRDFun(wavelength, r_max = 5,density_zero=None,NAa=None,highlight= 4,value=0.6):
+def AmorphousRDFun(wavelength=1.54184, amor_file=None,r_max = 5,density_zero=None,Nf2=None,highlight= 4,value=0.6):
     module = RadialDistribution(wavelength, r_max)
-    return module.RDF(density_zero,NAa,highlight,value)
+    return module.RDF(amor_file,density_zero,Nf2,highlight,value)
 
 def Plot_Components(lowboundary, upboundary, wavelength, density_list=None, name = None, Macromolecule = False,phase = 1,Pic_Title = False,lifting=None):
     """
@@ -353,7 +349,7 @@ def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90, 0.01),Supe
     """
     return XRD_profile(filepath,wavelength,two_theta_range,SuperCell,PeriodicArr,ReSolidSolution, RSSratio, GrainSize,LatticCs,PeakWidth, CSWPEMout).Simulate(Vacancy=Vacancy, Vacancy_atom = Vacancy_atom, Vacancy_ratio = Vacancy_ratio,orientation=orientation,thermo_vib=thermo_vib,zero_shift = zero_shift, bacI=bacI,seed=seed)
     
-def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False,cal_extinction=True):
+def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False,cal_extinction=True,relaxation=False):
     """
     for a single crystal
     Computes the XRD pattern and save to csv file
@@ -366,27 +362,31 @@ def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = No
         latt and AtomCoordinates # ['22',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  # '22' is the space group code
         This interface is to prevent non-standard cif files from failing to read-in structures,
         through manual reading and manual input method definition
+        relaxation : whether to relax the structure by M3Gnet relaxation potential field
     return 
     latt: lattice constants : [a, b, c, al1, al2, al3]
     AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
     lattic_density: rou
     """
-    return profile(wavelength,two_theta_range,show_unitcell,cal_extinction).generate(filepath,latt,AtomCoordinates)
+    return profile(wavelength,two_theta_range,show_unitcell,cal_extinction,relaxation).generate(filepath,latt,AtomCoordinates)
 
 def SubstitutionalSearch(xrd_pattern, cif_file,random_num=8, wavelength='CuKa',search_cap=50,SolventAtom = None, SoluteAtom= None,max_iter = 100,cal_extinction=True):
     return BgolearnOpt(xrd_pattern, cif_file, random_num,wavelength,search_cap,cal_extinction). Substitutional_SS(SolventAtom, SoluteAtom ,max_iter)
 
 
-def XPSfit(Var, atomIdentifier, no_bac_df, original_df, bacground_df, energy_range = None, bta=0.8, bta_threshold = 0.5,limit=0.0005, 
-           iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0., s_energy=0., tao=0.5, ratio=0.8,
+def XPSfit(Var, atomIdentifier, satellitePeaks,no_bac_df, original_df, bacground_df, energy_range = None, bta=0.8, bta_threshold = 0.5,limit=0.0005, 
+           iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0., s_energy=[100,1000], tao=0.5, ratio=0.8,
        InitializationEpoch=2,loadParams=False,):
-  
+    """
+
+    s_energy : asymmetric peak's range, a list [900,950]
+    """
     time0 = time()
     start_time = datetime.datetime.now()
     print('Started at', start_time.strftime('%c'),'\n')
 
     
-    XPS = XPSsolver(Var, asy_C, s_energy, atomIdentifier, no_bac_df,original_df,bacground_df, energy_range, bta, 
+    XPS = XPSsolver(Var, asy_C, s_energy, atomIdentifier, satellitePeaks,no_bac_df,original_df,bacground_df, energy_range, bta, 
                     bta_threshold,limit, iter_limit,w_limit,iter_max,lock_num, InitializationEpoch, loadParams,tao,ratio
     )
         

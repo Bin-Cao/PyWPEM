@@ -567,13 +567,18 @@ class WPEMsolver(object):
                     np.multiply(np.multiply(gamma_ji_l[:, mu_n:mu_n + 1].T, two_theta), intensity).sum())
                 numerator_mu.append(np.multiply(np.multiply(gamma_ji[:, mu_half + 1:mu_half + 2].T, two_theta),intensity).sum())
 
-            for i_ln in range(k_ln):
-                mu_k = 2 * i_ln
-                new_p1_list[i_ln] = (numerator_mu[mu_k] / (denominator_mu[mu_k])) + \
-                                    (numerator_mu[mu_k + 1] / (denominator_mu[mu_k + 1] ))
+            if type(self.IniEpoch) != int:
+                print('type error, InitializationEpoch must be an integer')
+            elif i_ter >= self.IniEpoch :
+                for i_ln in range(k_ln):
+                    mu_k = 2 * i_ln
+                    new_p1_list[i_ln] = (numerator_mu[mu_k] / (denominator_mu[mu_k])) + \
+                                        (numerator_mu[mu_k + 1] / (denominator_mu[mu_k + 1] ))
 
+            else: new_p1_list = copy.deepcopy(p1_list)
             __new_mu_set = Distribute_mu(new_p1_list, mui_abc, hkl_data, lmd)
             # a set of mu [[mu1,mu2,mu3....],[],..]
+            
 
             # Computing Bragg steps in parallel
             pool = ProcessPoolExecutor(self.cpu)
@@ -1038,7 +1043,6 @@ class WPEMsolver(object):
             print('type error, InitializationEpoch must be an integer')
         elif self.IniEpoch >= i_ter:
             return ini_LC, new_mu_set, new_mu_set
-        else: pass
         
         # associate the peak's locations by Bragg law
         lattice_a, lattice_b, lattice_c, lattice_ang1, lattice_ang2, lattice_ang3, mui_abc_part = BLD.OptmialLatticeConstant(

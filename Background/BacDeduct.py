@@ -187,8 +187,8 @@ class TwiceFilter:
             for seg in range(len(self.segement)):
                 choiselg_num.append(int(bac_num * (self.segement[seg][1] - self.segement[seg][0]) / total_length)) 
             for seg in range(len(self.segement)):
-                low_index = np.where(angle == self.segement[seg][0])[0][0]
-                up_index = np.where(angle == self.segement[seg][1])[0][0]
+                low_index = np.argmin(np.abs(angle - self.segement[seg][0]))
+                up_index = np.argmin(np.abs(angle - self.segement[seg][1]))
                 int_segement = SG_filter_intensity[low_index:up_index]
                 num = choiselg_num[seg]
              

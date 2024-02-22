@@ -3,7 +3,8 @@
 
 import os
 import warnings
-from sympy import *
+import sympy
+from sympy import symbols, cos, sin
 import copy
 import numpy as np
 import pandas as pd
@@ -15,9 +16,10 @@ from ..XRDSimulation.DiffractionGrometry.atom import atomics
 from ..EMBraggOpt.BraggLawDerivation import BraggLawDerivation
 from ..Plot.UnitCell import plotUnitCell
 from ..EMBraggOpt.WPEMFuns.SolverFuns import cal_system
+from .Relaxer import _Relaxer
 
 class profile:
-    def __init__(self, wavelength='CuKa',two_theta_range=(10, 90),show_unitcell=False,cal_extinction = True):
+    def __init__(self, wavelength='CuKa',two_theta_range=(10, 90),show_unitcell=False,cal_extinction = True,relaxation=False):
         """
         Args:
             wavelength: The wavelength can be specified as either a
@@ -36,6 +38,7 @@ class profile:
         self.two_theta_range = two_theta_range
         self.cal_extinction = cal_extinction
         self.show_unitcell = show_unitcell
+        self.relaxation = relaxation
 
     # Calculate the volume of the unit cell
     def LatticVolume(self, crystal_system):
@@ -46,17 +49,17 @@ class profile:
         if crystal_system == 1:  # Cubic
             Volume = sym_a ** 3
         elif crystal_system == 2:  # Hexagonal
-            Volume = sym_a ** 2 * sym_c * np.sqrt(3) / 2
+            Volume = sym_a ** 2 * sym_c * sympy.sqrt(3) / 2
         elif crystal_system == 3:  # Tetragonal
             Volume = sym_a * sym_a * sym_c
         elif crystal_system == 4:  # Orthorhombic
             Volume = sym_a * sym_b * sym_c
         elif crystal_system == 5:  # Rhombohedral
-            Volume = sym_a ** 3 * np.sqrt(1 - 3 * cos(angle1) ** 2 + 2 * cos(angle1) ** 3)
+            Volume = sym_a ** 3 * sympy.sqrt(1 - 3 * cos(angle1) ** 2 + 2 * cos(angle2) ** 3)
         elif crystal_system == 6:  # Monoclinic
             Volume = sym_a * sym_b * sym_c * sin(angle2)
         elif crystal_system == 7:  # Triclinic
-            Volume = sym_a * sym_b * sym_c * np.sqrt(1 - cos(angle1) ** 2 - cos(angle2) **2
+            Volume = sym_a * sym_b * sym_c * sympy.sqrt(1 - cos(angle1) ** 2 - cos(angle2) **2
                                               - cos(angle3) ** 2 + 2 * cos(angle1) * cos(angle2) * cos(angle3))
         else:
             Volume = -1
@@ -136,7 +139,6 @@ class profile:
         else: pass
 
         lattic_mass = cal_lattic_mass(AtomCoordinates)
-
         VolumeFunction = self.LatticVolume(cal_system([latt])[0])
         sym_a, sym_b, sym_c, angle1, angle2, angle3 = symbols('sym_a sym_b sym_c angle1 angle2 angle3')
         lattic_volume = (float(VolumeFunction.subs(
@@ -145,6 +147,14 @@ class profile:
             )
 
         lattic_density = lattic_mass / lattic_volume
+
+        # relaxition
+        if self.relaxation == True:
+            print('M2GNET is applied for calculating the fromation energy per atom')
+            lattice, final_energy_per_atom = _Relaxer(system,latt,AtomCoordinates)
+        else:pass
+
+
         return latt, AtomCoordinates,lattic_density
 
 ########################################################################

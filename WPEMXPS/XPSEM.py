@@ -33,14 +33,13 @@ class XPSsolver(object):
       
         self.Var = Var # standard deviation of background intensity
         self.asy_C = asy_C # asymmetric parameter for descripting the asymmetric peak
-        self.s_energy = s_energy
+        self.s_energy = s_energy # asymmetric peak's range, a list
         self.atomIdentifier = atomIdentifier 
-        #  A list of atom identifiers, please 
-        #  please put together the split electron descriptor
-        #  i.e., [['Cu1','2p3/2',932.6],['Cu2','2p3/2',932.4],['Cu3','2p3/2',933.6]]
-        self.SatellitePeaks = SatellitePeaks # list for assigning the satellite peaks
-        # please put together the split electron descriptor
-        # i.e., [['CuII','2p3/2',935.6],['CuII','2p3/2',938.4],['CuII','2p1/2',934.6]]
+        # A list of atom identifiers, please 
+        # please put the split electron descriptor together
+        # i.e., [['Cu2+','2p3/2',935.6],['Cu2+','2p1/2',938.4],['Cu+','2p1/2',934.6]]
+        self.SatellitePeaks = SatellitePeaks # list of satellite peaks
+        # i.e., [['Cu2+','2p3/2',934.8],['Cu2+','2p3/2',934.9],['Cu+','2p1/2',933.7]]
         self.no_bac_df = no_bac_df # electron binding energy
         self.original_df = original_df # experimental observations
         self.bacground_df = bacground_df # fitted bacground energy
@@ -56,7 +55,7 @@ class XPSsolver(object):
         self.loadParams = loadParams # if read in the initial parameters
         self.tao = tao
         self.ratio = ratio
-
+        self.total_p_num = len(atomIdentifier) + len(SatellitePeaks)
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
         plt.rcParams['font.size'] = 12
@@ -118,7 +117,7 @@ class XPSsolver(object):
             print('\n')
             # Update parameters via XPSEM process
             w_list, p1_list, p2_list, i_ter, flag, \
-            i_out, bac_up, Rp, Rwp, Rsquare, = self.up_parameter( EBenergy, inten, area, min_i, i_obser, bac)
+            i_out, bac_up, Rp, Rwp, Rsquare, = self.up_parameter(EBenergy, inten, area, min_i, i_obser, bac)
 
             # This part is reserved due to historical version reasons
             # To speed up, the R factor is not calculated in the iteration
@@ -240,35 +239,26 @@ class XPSsolver(object):
 
     # Update parameters. 
     # The main function of XPSEM Solver
-
     def up_parameter(self, EBenergy, inten, area, min_i, i_obser, bac,): 
-        SOCvalue, group, multipleState = SpinOrbitCoupling(self.atomIdentifier)
-        total_e_num = sum(multipleState)
-   
+        OriPeaks, SatPeaks = SpinOrbitCoupling(self.atomIdentifier,self.SatellitePeaks)
+        _OriPeaks = copy.copy(OriPeaks)
+        _SatPeaks = copy.copy(SatPeaks)
         """
-        SOCvalue:
-        [['Cu', '2p3/2', 932.6,[2,2,3/2]], ['Cu', '2p1/2', 933.6,[2,2,1/2]],]
-        [['Cu2+', '2p3/2', 933.4,[2,2,3/2]],]
+        OriPeaks:
+        [['Cu', '2p3/2', 932.6,[2,2,3/2]], ['Cu', '2p1/2', 933.6,[2,2,1/2]],] # [n,l,j]
+        [['Cu2+', '2p3/2', 933.4, [2,2,3/2]],]
         [['Zn', '2p3/2', 932.4,[2,2,3/2]],]
 
-        group:
-        [['Cu', '2p3/2', 932.6], ['Cu', '2p1/2', 933.6]]
-        [['Cu2+', '2p3/2', 933.4]]
-        [['Zn', '2p3/2', 932.4]]
-
-        multipleState: [2,1,1]
-
-        SatellitePeaks = [['CuII','2p3/2',941,943],['CuII','2p1/2',962.5,]]
+        SatPeaks:
+        [['Cu2+','2p3/2',934.8],['Cu2+','2p3/2',934.9]]
+        [['Cu+','2p1/2',933.7]]
         """
         # initilize the peak locations [...]
         ini_p = []
-        for k in range(len(group)):
-            for j in range(len(group[k])):
-                ini_p.append(group[k][j][2])
-        # add satellite peaks
-        for pek in self.SatellitePeaks:
-            for k in range(len(pek)-2):
-                ini_p.append(pek[k+2])
+        for k in self.atomIdentifier:
+            ini_p.append(k[2])
+        for p in self.SatellitePeaks:
+            ini_p.append(p[2])
 
         if self.loadParams == True:
             ini_w_list, ini_p1_list, ini_p2_list = readfile("./WPEMFittingResults/modelparams.csv")
@@ -304,13 +294,14 @@ class XPSsolver(object):
         lock = 0
         # Enter the EM-Bragg iteration
         for iteration in tqdm(range(self.iter_max)):
+            print("WPEM %s-th iteration" % i_ter)
+
             w_list = copy.deepcopy(new_w_list)
             p1_list = copy.deepcopy(mui_set)
             p2_list = copy.deepcopy(new_p2_list)
             i_ter += 1
             # E step, calculate the distribution of latent variables
-            # 在 XPS 不对称函数需要修改
-            gamma_ji, gamma_ji_l, p_as_ji = gamma_ji_list(EBenergy, w_list, p1_list, p2_list, self.s_energy, self.asy_C)
+            gamma_ji, gamma_ji_l, p_as_ji = gamma_ji_list(EBenergy, w_list, p1_list, p2_list, self.s_energy, self.asy_C,model='XPS')
             # M step, update parameters by Q function
             # update w_list
             denominator = []
@@ -347,16 +338,29 @@ class XPSsolver(object):
             if i_ter <= self.IniEpoch:
                 pass
             else:
-                p1_list, new_w_list= SLCoupling(new_p1_list,ini_p1_list, new_w_list,multipleState,SOCvalue,self.SatellitePeaks,self.tao,self.ratio)
+                p1_list, new_w_list,= SLCoupling(new_p1_list,ini_p1_list, new_w_list,OriPeaks, SatPeaks,self.tao,self.ratio,p2_list)
             
 
-            print("WPEM %s-th iteration" % i_ter)
+            
+
+
+
             order = 0
-            for d in range(len(group)):
-                for p in range(len(group[d])):
-                    group[d][p][2]=round(p1_list[order],3)
+            # just for showing, the peak locations in OriPeaks, SatPeaks are not used in the updating process
+            for d in range(len(_OriPeaks)):
+                for p in range(len(_OriPeaks[d])):
+                    _OriPeaks[d][p][2]=round(p1_list[order],3)
                     order += 1
-                    print(group[d][p])
+            print("The energies of electrons are:")
+            print(_OriPeaks)
+
+            print("The energies of satellite peak are:")
+            for d in range(len(_SatPeaks)):
+                for p in range(len(_SatPeaks[d])):
+                    _SatPeaks[d][p][2]=round(p1_list[order],3)
+                    order += 1
+            print(_SatPeaks)
+
 
             for i_ln in range(k_ln):
                 i_l = i_ln * 2
@@ -501,11 +505,13 @@ class XPSsolver(object):
     
         plt.plot(EBenergy, inten_upbac + bac_up, '-k', label="Experimental XPS Profile", )
         plt.plot(EBenergy, i_calc + bac_up, 'g',linestyle='--', label="WPEM-XPS fitting profile",)
-        for com in range(total_e_num):
+        for com in range(self.total_p_num):
             index = 2 * com
             y_com = (new_w_list[index] * lorenz_density(EBenergy,p1_list[com],new_p2_list[index]) + new_w_list[index+1] *
                                     normal_density(EBenergy, p1_list[com],new_p2_list[index+1])) * p_as_ji[:,com]
-            plt.plot(EBenergy, y_com, label="electron{num}".format(num = com))
+            # plt.plot(EBenergy, y_com, label="electron{num}".format(num = com))
+            plt.plot(EBenergy, y_com+ bac_up,)
+            plt.fill_between(EBenergy, y_com+ bac_up,bac_up, alpha=0.3)
         plt.xlabel('Binding Energy(eV)')
         plt.ylabel('I (a.u.)')
         plt.legend()
@@ -653,60 +659,63 @@ class XPSsolver(object):
 
 ################################################################
 # Functions
-def SpinOrbitCoupling(AtomIdentifier):
+def SpinOrbitCoupling(AtomIdentifier,SatellitePeaks):
     """
     Handle input format
 
     input:
         AtomIdentifier : A list of atom identifiers
         i.e.,
-        [['Cu1','2p3/2',932.6],['Cu2','2p3/2',932.4],['Cu3','2p3/2',933.6]]
+        [['Cu2+','2p3/2',932.9],['Cu2+','2p1/2',932.4],['Cu1+','2p3/2',933.6]]
+
+        SatellitePeaks : A list of satellite peaks
+        i.e., 
+        [['Cu2+','2p3/2',934.8],['Cu2+','2p3/2',934.9],['Cu+','2p1/2',933.7]]
     output:
+        OriPeaks:
+        [['Cu', '2p3/2', 932.6,[2,2,3/2]], ['Cu', '2p1/2', 933.6,[2,2,1/2]],] # [n,l,j]
+        [['Cu2+', '2p3/2', 933.4, [2,2,3/2]],]
+        [['Zn', '2p3/2', 932.4,[2,2,3/2]],]
+
+        SatPeaks:
+        [['Cu2+','2p3/2',934.8],['Cu2+','2p3/2',934.9]]
+        [['Cu+','2p1/2',933.7]]
 
     """
     # Group by element type
     element_dict = {}
     for item in AtomIdentifier:
         first_element = item[0]
-        n, l ,_ = parse_orbital(item[1])
+        n, l , j = parse_orbital(item[1])
         # for a given atom, when n and l number are same, they are split states.
         # Only if the initial state is the same can it be considered the same atom.
         key = (first_element, n,l) 
+        item.append([n,l,j])
         if key in element_dict:
             element_dict[key].append(item)
         else:
             element_dict[key] = [item]
-    
-    Group = []
+
+    OriPeaks = []
     for key, value in element_dict.items():
-        Group.append(value)
+        OriPeaks.append(value)
 
-    result = copy.deepcopy(Group)
-    split_set = []
-    for atom_type in range(len(Group)):
-        split_set.append(len(Group[atom_type]))
-        for atom in range(len(Group[atom_type])):
-            Identifier = Group[atom_type][atom]
-            # (1) quantum numbers
-            n, l ,j = parse_orbital(Identifier[1])
-            result[atom_type][atom].append([n,l,j])
-            # (2) peak location
-            # copy from the AtomIdentifier
-    """
-    result:
-    [['Cu', '2p3/2', 932.6,[2,2,3/2]], ['Cu', '2p1/2', 933.6,[2,2,1/2]],]
-    [['Cu2+', '2p3/2', 933.4,[2,2,3/2]],]
-    [['Zn', '2p3/2', 932.4,[2,2,3/2]],]
+    _element_dict = {}
+    for k in SatellitePeaks:
+        first_element = k[0]
+        n, l , _ = parse_orbital(k[1])
+        key = (first_element, n,l) 
+        if key in _element_dict:
+            _element_dict[key].append(k)
+        else:
+            _element_dict[key] = [k]
+    
+    SatPeaks = []
+    for key, value in _element_dict.items():
+        SatPeaks.append(value)
 
-    Group:
-    [['Cu', '2p3/2', 932.6], ['Cu', '2p1/2', 933.6]]
-    [['Cu2+', '2p3/2', 933.4]]
-    [['Zn', '2p3/2', 932.4]]
-
-    split_set:
-    [2,1,1]
-    """
-    return result, Group, split_set
+    
+    return OriPeaks, SatPeaks, 
 
 def parse_orbital(orbital):
   
@@ -747,83 +756,82 @@ def reorder_vector(EBenergy, inten):
     sorted_EBenergy, sorted_inten = zip(*sorted_data)
     return np.array(sorted_EBenergy), np.array(sorted_inten)
 
-def SLCoupling(mu_list, ori_mu_list, w_list, multipleState, SOCvalue, SatellitePeaks,tao, ratio):
+def SLCoupling(_mu_list, _ori_mu_list, _w_list, OriPeaks, SatPeaks,tao, ratio,p2_list):
     """
     mu_list = [632,654,752,815]
     w_list = [60000,56000,72000,63000,]
-    multipleState = [2,1,1]
-    SOCvalue = 
-    [['Cu', '2p3/2', 932.6,[2,2,3/2]], ['Cu', '2p1/2', 933.6,[2,2,1/2]],]
-    [['Cu2+', '2p3/2', 933.4,[2,2,3/2]],]
+   
+    OriPeaks:
+    [['Cu', '2p3/2', 932.6,[2,2,3/2]], ['Cu', '2p1/2', 933.6,[2,2,1/2]],] # [n,l,j]
+    [['Cu2+', '2p3/2', 933.4, [2,2,3/2]],]
     [['Zn', '2p3/2', 932.4,[2,2,3/2]],]
 
-    SatellitePeaks = [['CuII','2p3/2',941,943],['CuII','2p1/2',962.5,]]
+    SatPeaks:
+    [['Cu2+','2p3/2',934.8],['Cu2+','2p3/2',934.9],['Cu2+','2p1/2',935.9]]
+    [['Cu+','2p1/2',933.7]]
     """
 
-    new_mu_list = copy.deepcopy(mu_list)
-    new_w_list = copy.deepcopy(w_list)
+    new_mu_list = copy.deepcopy(_mu_list)
+    new_w_list = copy.deepcopy(_w_list)
+    ori_mu_list = copy.deepcopy(_ori_mu_list)
+
+
     # fine-tuning binding energy 
-    for peak in range(len(mu_list)):
+    for peak in range(len(new_mu_list)):
         if abs(new_mu_list[peak] - ori_mu_list[peak]) < tao:
             pass
         else:
-            new_mu_list[peak] = ratio * ori_mu_list[peak] + (1-ratio) * mu_list[peak]
+            new_mu_list[peak] = ratio * ori_mu_list[peak] + (1-ratio) * _mu_list[peak]
     
-    # search for the peaks generated by splitting
-    # multipleState = [2,1,1]
-   
-    splitState_num = [] # save the split states number (Consider multiple splits)
-    splitState_QN = [] # save the quantum number of each splited electron
-    splitAtoms = [] # save the atoms symbol
-    splitState_index = [] # save the index of peaks correlated with each other, viz., splitted states 
-    total_index = 0
-    for k in range(len(multipleState)):
-        if multipleState[k] == 1:
+    
+    
+    total_index = 0 # remember the index of the current peak 
+    orbit_names = [] # a list save the electronic orbit name, e.g., [['Cu', '2p3/2'],['Cu', '2p1/2'],...]
+    for k in range(len(OriPeaks)):
+        if OriPeaks[k] == 1: # no SL coupling
+            total_index += 1
+            orbit_names.append(OriPeaks[k][0], OriPeaks[k][1])
+            pass
+        else:
+            related_peaks = []
+            quantum_num = []
+            for v in range(len(OriPeaks[k])):
+                orbit_names.append([OriPeaks[k][v][0], OriPeaks[k][v][1]])
+                related_peaks.append(total_index)
+                quantum_num.append(OriPeaks[k][v][3])
+                total_index += 1
+                atom_name = OriPeaks[k][v][0]
+            # At most two peaks are related by SL coupling
+            # return x1, y1, x2, y2
+            new_mu_list, new_w_list = calib_energy_fun(new_mu_list,new_w_list,related_peaks,quantum_num,atom_name)
+
+    # this part of the code updating the peaks locations and intensity inducted by SL coupling
+    # the recorded total_index represents the total number of peaks contained in OriPeaks right now
+            
+    for k in range(len(SatPeaks)):
+        if SatPeaks[k] == 1:
+            # Satellite peaks are related only if n and l are the same
             total_index += 1
             pass
         else:
-            splitState_num.append(multipleState[k])
-            for v in range(multipleState[k]):
-                splitState_index.append(total_index)
+            _orbit_name_list = []
+            SatPeaks_loc = []
+            for v in range(len(SatPeaks[k])):
+                _orbit_name = [SatPeaks[k][v][0],SatPeaks[k][v][1]]
+                _orbit_name_list.append(_orbit_name)
+                SatPeaks_loc.append(total_index)
                 total_index += 1
-                splitState_QN.append(SOCvalue[k][v][-1])
-                splitAtoms.append(SOCvalue[k][v][0])
-    
-    # splitState_num saves the number of states be split 
-    # splitState_index saves the index of the split state
-    # splitState_QN saves the corresponding quantum number
-    if splitState_num == []: # energy independence
-        new_w_list = w_list
-    else:
-        for num in splitState_num:
-            # this fun only consider the two states splitting by SL coupling 
-            total_intensity = []
-            total_energy = []
-            j_list = []
-            for k in range(num):
-                total_intensity.append(w_list[splitState_index[k]])
-                total_energy.append(mu_list[splitState_index[k]])
-                j_list.append(splitState_QN[k][2] * 2 + 1) # j * 2 + 1
-                
-                
-            # the splitting states have same Quantum numbers of n and l
-            update_mu_list = calZeffect(total_energy,splitState_QN[0][0],splitState_QN[0][1],splitAtoms[0],)
-            # update intensity according to the splitting ratios
-            for k in range(num):
-                new_w_list[splitState_index[k]] = np.sum(total_intensity) * j_list[k]/np.sum(j_list)
-                new_mu_list[splitState_index[k]] = update_mu_list[k]
-            
-            # del first num elements from splitState_index and splitState_QN, end the inner loop
-            splitState_index = splitState_index[num:]
-            splitState_QN = splitState_QN[num:]
-            splitAtoms = splitAtoms[num:]
-
-    return new_mu_list, new_w_list
+            new_w_list, = cal_SatPeaks(new_mu_list,new_w_list,orbit_names,_orbit_name_list,SatPeaks_loc,p2_list)
+                  
+    return new_mu_list,new_w_list
 
 def calZeffect(total_energy, n,l,atom_symbol):
+    """
+    total_energy : list of splitting peak's energy
+    """
     deta_U = abs(total_energy[1] - total_energy[0]) 
     Zeff = (deta_U * n**3 * l * (l+1) / 7.25e-4)** (1/4)
-    Zeff = np.round(Zeff,2)
+    Zeff = np.round(Zeff,3)
     energy_gap = Zeff**4 * 7.25e-4/ (n**3 * l * (l+1))
 
     low_energy_electron = (total_energy[1] + total_energy[0]) / 2 - energy_gap / 2
@@ -831,10 +839,111 @@ def calZeffect(total_energy, n,l,atom_symbol):
     if total_energy[1] >= total_energy[0]:
         res = [low_energy_electron,high_energy_electron]
     else:res = [high_energy_electron,low_energy_electron]
-    print('Under the central field approximation, the effective charge of {} is:'.format(atom_symbol), Zeff)
+
+    name,_ = split_string(atom_symbol)
+    print('Under the central field approximation, the effective charge of {} is:'.format(name), Zeff)
     return res  
 
 
+
+def calib_energy_fun(new_mu_list,new_w_list,related_peaks,quantum_num,atom_symbol):
+    """
+    new_mu_list : peak location list
+    new_w_list : peak intensity list, w*beta, w*(1-beta) list
+
+    related_peaks : list contains the index of SL coupling peaks
+    quantum_num : list contains the quantum number of splitting peaks
+    """
+    _mu_list = copy.deepcopy(new_mu_list)
+    _w_list = copy.deepcopy(new_w_list)
+    ratio = (quantum_num[0][2] *2 +1 )/ (quantum_num[0][2] *2 +1 + quantum_num[1][2] *2 +1) # 2j +1 
+    
+
+    w_peak1 = new_w_list[2 * related_peaks[0]] + new_w_list[2 * related_peaks[0]+1]
+    w_peak2 = new_w_list[2 * related_peaks[1]] + new_w_list[2 * related_peaks[1]+1]
+    ori_ratio = w_peak1 / (w_peak1 + w_peak2) 
+
+    practice_ratio = ori_ratio + (ratio - ori_ratio) * 0.5
+    int_p1 = (w_peak1 + w_peak2) * practice_ratio
+    int_p2 = (w_peak1 + w_peak2) * (1 - practice_ratio)
+
+    _w_list[2 * related_peaks[0]] = int_p1 * new_w_list[2 * related_peaks[0]] / (new_w_list[2 * related_peaks[0]] + new_w_list[2 * related_peaks[0]+1])
+    _w_list[2 * related_peaks[0]+1] = int_p1 * new_w_list[2 * related_peaks[0]+1] / (new_w_list[2 * related_peaks[0]] + new_w_list[2 * related_peaks[0]+1])
+   
+    _w_list[2 * related_peaks[1]] = int_p2 * new_w_list[2 * related_peaks[1]] / (new_w_list[2 * related_peaks[1]] + new_w_list[2 * related_peaks[1]+1])
+    _w_list[2 * related_peaks[1]+1] = int_p2 * new_w_list[2 * related_peaks[1]+1] / (new_w_list[2 * related_peaks[1]] + new_w_list[2 * related_peaks[1]+1])
+
+
+    peak_list = calZeffect([new_mu_list[related_peaks[0]],new_mu_list[related_peaks[1]]], quantum_num[0][0],quantum_num[0][1],atom_symbol)
+    _mu_list[related_peaks[0]] = peak_list[0]
+    _mu_list[related_peaks[1]] = peak_list[1]
+    return _mu_list, _w_list
+
+
+def cal_SatPeaks(new_mu_list,new_w_list,orbit_names,_orbit_name_list,SatPeaks_loc,p2_list):
+
+    """
+    After the previous processing, the different electron orbitals entering this function are all related. 
+
+    orbit_names, name list of each peaks in electron orbit
+    _orbit_name_list, name list of satellite peaks
+        the name is in form of [['Cu2+', '2p3/2'],...]
+    SatPeaks_loc, index of satellite peaks
+    """
+    _w_list = copy.deepcopy(new_w_list)
+
+    dict = {}
+    for k, key in enumerate(_orbit_name_list):
+        key = tuple(key)
+        if key in dict:
+            dict[key].append(SatPeaks_loc[k])
+        else:
+            dict[key] = [SatPeaks_loc[k]]
+
+    _mother_peaks = []
+    _child_peaks = []
+    __name = []
+    for key, value in dict.items():
+        __name.append(key)
+        _mother_peaks.append(orbit_names.index(list(key)))
+        _child_peaks.append(value)
+
+    ratio_list = []
+    for k in range(len(_mother_peaks)):
+        p = _mother_peaks[k]
+        mo_integral_energy = integral_PV_single([new_w_list[2*p],new_w_list[2*p+1]], new_mu_list[p],
+                                                                             [p2_list[2*p],p2_list[2*p+1]])
+        
+        # each individual splitting peak may have several satellite peaks
+        chi_integral_energy = []
+        for sp in _child_peaks[k]:
+            chi_integral_energy.append(integral_PV_single([new_w_list[2*sp],new_w_list[2*sp+1]], new_mu_list[sp],
+                                                                             [p2_list[2*sp],p2_list[2*sp+1]]))
+            
+
+        ratio = np.sum(chi_integral_energy) / mo_integral_energy
+        ratio_list.append(ratio)
+
+    base_line = np.array(ratio_list).mean()
+
+    
+    for k in range(len(_mother_peaks)):
+        ori_ratio = ratio_list[k]
+        practice_ratio = ori_ratio + (base_line - ori_ratio) * 0.5
+
+        p = _mother_peaks[k]
+
+        _w_list[2*p] = new_w_list[2*p] / (1-ratio_list[k]) * (1-practice_ratio)
+        _w_list[2*p+1] = new_w_list[2*p+1] / (1-ratio_list[k]) * (1-practice_ratio)
+
+        for sp in _child_peaks[k]:
+            _w_list[2*sp] = new_w_list[2*sp] / ratio_list[k] * practice_ratio
+            _w_list[2*sp+1] = new_w_list[2*sp+1] / ratio_list[k] * practice_ratio
+    
+
+    print('The Integrated Energy ratio for satellite peak of {} is {}'.format(__name,base_line) )   
+
+    return _w_list,
 
 """
 def splt_energy():
@@ -844,4 +953,29 @@ def calZeffect(total_energy, QNset, j_list):
     d_f =  self.d_spcing(crystal_sys)
 
 """
+
+def split_string(string):
+    match = re.match(r'([A-Za-z]+)(\d*[\+\-]*)', string)
+    if match:
+        letter_part = match.group(1)
+        other_part = match.group(2)
+        return letter_part, other_part
+    else:
+        return None, None
+    
+
+def integral_PV_single(w_list, mu, p2_list):
+    """
+    :param w_list: list of weight (Ai)
+    :param mu: a single peak μ1
+    :param p2_list: list of γi and σi^2
+    :return: Return integral density of a single PV peak 
+    """
+    x = np.arange(mu-20,mu+20,0.1)
+    eare =w_list[0] * lorenz_density(x, mu, p2_list[0]) + \
+                        w_list[1] * normal_density(x, mu, p2_list[1])
+    return eare.sum()*0.1
+
 ################################################################
+
+

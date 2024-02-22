@@ -105,12 +105,13 @@ class Decomposedpeaks():
                     pass
                 else:
                     plt.title('Decomposition peak', size=20)
-                plt.plot(o_x, o_y, label="real intensity")
+                plt.plot(o_x, o_y, label="experiment")
                 plt.plot(f_x, f_y, label="WPEM fitting profile")
                 for i in range(k):
                     plt.plot(o_x, peak_intens[i])
                 plt.legend()
                 plt.savefig('./DecomposedComponents/Decomposed_peaks.png', dpi=800)
+                plt.savefig('./DecomposedComponents/Decomposed_peaks.svg', dpi=800)
                 plt.show()
 
             elif type(phase) == int:
@@ -174,7 +175,7 @@ class Decomposedpeaks():
                     pass
                 else:
                     plt.title('Decomposited peaks - all components', size=15)
-                plt.plot(o_x, o_y+lifting[-1], label="real intensity")
+                plt.plot(o_x, o_y+lifting[-1], label="experiment")
                 
                 for l in range(phase):
                         plt.plot(o_x, DecomposepeaksIntensity[l]+ lifting[l],label="{System}".format(System = name[l]))
@@ -182,6 +183,7 @@ class Decomposedpeaks():
                         area.append(self.theta_intensity_area(o_x, DecomposepeaksIntensity[l]))      
                 plt.legend()
                 plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
+                plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.svg', dpi=800)
                 plt.show()
 
                 # save the 2theta-intensity file of decomposed components
@@ -272,7 +274,7 @@ class Decomposedpeaks():
                     pass
                 else:
                     plt.title('Decomposition peak', size=20)
-                plt.plot(o_x, o_y, label="real intensity")
+                plt.plot(o_x, o_y, label="experiment")
                 plt.plot(f_x, f_y, label="WPEM fitting profile")
                 for i in range(k):
                     plt.plot(o_x, peak_intens[i],linewidth=2)
@@ -282,6 +284,7 @@ class Decomposedpeaks():
                     plt.plot(o_x, Amorphous_peak_intens[i],linestyle='--', c='b',linewidth=1.5,)
                 plt.legend()
                 plt.savefig('./DecomposedComponents/Decomposed_peaks.png', dpi=800)
+                plt.savefig('./DecomposedComponents/Decomposed_peaks.svg', dpi=800)
                 plt.show()
                 
                 # cal relative bulk crystallinity
@@ -385,7 +388,7 @@ class Decomposedpeaks():
                     pass
                 else:
                     plt.title('Decomposited peaks - all components', size=15)
-                plt.plot(o_x, o_y+lifting[-1], label="Real intensity")
+                plt.plot(o_x, o_y+lifting[-1], label="experiment")
                 for l in range(phase):
                     plt.plot(o_x, DecomposepeaksIntensity[l]+ lifting[l],label=" {System}".format(System = name[l]))
                     # calculate the integral area of each component
@@ -404,6 +407,7 @@ class Decomposedpeaks():
                     plt.plot(Amorphous_f_x, Amorphous_peak_intens[i],linestyle='--', c='b',linewidth=1.5,)
                 plt.legend()    
                 plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.png', dpi=800)
+                plt.savefig('./DecomposedComponents/Decomposed_peaks_totalview.svg', dpi=800)
                 plt.show()
 
                 Sum = 0.0

@@ -10,11 +10,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from math import sin, pi
 
-def Amorphous_fitting(mix_component, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
+def Amorphous_fitting(mix_component, amor_file = None, ang_range = None, sigma2_coef = 5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
     """
     Amorphous Qualitative Description Module
 
     :param mix_component : the number of amorphous peaks 
+
+    :param amor_file : the amorphous file location
 
     :param ang_range : default is None
         two theta range of study
@@ -34,10 +36,13 @@ def Amorphous_fitting(mix_component, ang_range = None, sigma2_coef = 0.5, max_it
 
     : param Wavelength : Wavelength of ray, default is 1.54184 (Cu)
     """
+    os.makedirs('DecomposedComponents', exist_ok=True)
+    if amor_file == None:
+        # range: (0,90) angle range
+        data = pd.read_csv("./DecomposedComponents/upbackground.csv", header=None, names=['ang','int'])
+    else: 
+        data = pd.read_csv(amor_file, header=None, names=['ang','int'])
 
-    # range: (0,90) angle range
-    data = pd.read_csv("./DecomposedComponents/upbackground.csv", header=None, names=['ang','int'])
-    
     full_ang = copy.deepcopy(np.array(data.ang))
     ori_int = copy.deepcopy(np.array(data.int))
     if ang_range == None:
