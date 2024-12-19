@@ -68,6 +68,7 @@ class XPSsolver(object):
     
     # Whole pattern decomposition execution function, implemented by data reading and XPSEM iteration
     def cal_output_result(self,):
+       
         # Read non-background data, and the data format is energy-intensity/X-Y data.
         data = pd.read_csv(self.no_bac_df, header=None, names=['Benergy', 'intensity'])
         # Read raw/original data, and the data format is energy-intensity/X-Y data.
@@ -118,11 +119,11 @@ class XPSsolver(object):
             # Update parameters via XPSEM process
             w_list, p1_list, p2_list, i_ter, flag, \
             i_out, bac_up, Rp, Rwp, Rsquare, = self.up_parameter(EBenergy, inten, area, min_i, i_obser, bac)
-
+ 
             # This part is reserved due to historical version reasons
             # To speed up, the R factor is not calculated in the iteration
             # I consider one day to implement these part again
-
+        
             csv_file = "./XPSFittingProfile/XPSparams.csv"
             with open(csv_file, 'w', newline='') as file:
                 writer = csv.writer(file)
@@ -333,17 +334,13 @@ class XPSsolver(object):
                 mu_k = 2 * i_ln
                 new_p1_list[i_ln] = (numerator_mu[mu_k] / (denominator_mu[mu_k])) + \
                                     (numerator_mu[mu_k + 1] / (denominator_mu[mu_k + 1] ))
-
+            
             
             if i_ter <= self.IniEpoch:
                 pass
             else:
-                p1_list, new_w_list,= SLCoupling(new_p1_list,ini_p1_list, new_w_list,OriPeaks, SatPeaks,self.tao,self.ratio,p2_list)
+                p1_list, new_w_list, _child_peaks= SLCoupling(new_p1_list,ini_p1_list, new_w_list,OriPeaks, SatPeaks,self.tao,self.ratio,p2_list)
             
-
-            
-
-
 
             order = 0
             # just for showing, the peak locations in OriPeaks, SatPeaks are not used in the updating process
@@ -372,6 +369,29 @@ class XPSsolver(object):
                 # update the parameter of normal distribution, σi^2
                 new_p2_list[i_n] = solve_sigma2(EBenergy, gamma_ji[:, i_n:i_n + 1], inten,
                                                      p1_list[i_ln], denominator[i_n],self.limit)
+
+
+            # constrains the peak's shape
+            shape_params = copy.deepcopy(new_p2_list)
+            for _num in range(int(len(new_p2_list)/2)):
+                _gamma = shape_params[2*_num]
+                _sigma2 = shape_params[2*_num+1]
+                Γ = (2*_gamma + np.sqrt(8*np.log(2)*_sigma2)) /2
+                new_p2_list[2*_num]= Γ /2 * 0.9 + 0.1 *_gamma
+                new_p2_list[2*_num+1]= Γ**2 / (8*np.log(2)) * 0.9 + 0.1 *_sigma2
+
+            # constrains of the peak broadening of satellite peaks
+            try:
+                for _k in range(len(_child_peaks)):
+                    if len(_child_peaks[_k]) != 1:
+                        Γ_list = []
+                        for _sp in _child_peaks[_k]:
+                            Γ_list.append((2*new_p2_list[2*_sp] + np.sqrt(8*np.log(2)*new_p2_list[2*_sp+1]))/2) 
+                        _Γ = np.array(Γ_list).mean()
+                        for __sp in _child_peaks[_k]:
+                            new_p2_list[2*__sp]= _Γ /2
+                            new_p2_list[2*__sp+1]= _Γ**2 / (8*np.log(2))
+            except : pass
 
             # calculate the log likelihood value
             log_likelihood.append(np.multiply(np.log(mix_normal_lorenz_density(EBenergy,
@@ -560,7 +580,6 @@ class XPSsolver(object):
         """
         k = len(ini_p)
         # k is the number of peak i_obs is the XPS profile
-        Ai = 0.5
 
         # store peak locations / energies
         p1_list = copy.deepcopy(ini_p)
@@ -638,17 +657,17 @@ class XPSsolver(object):
                     p2_list[p2_ln] = 0.5
                     p2_list[p2_ln + 1] = 0.5
 
-        # bta<bta_threshold, the initial values of γi and σi^2 are set to bta, and all of Ai are 0.5.
+        # bta<bta_threshold, the initial values of γi and σi^2 are set to bta_threshold, and all of Ai are 0.5.
         elif self.bta < self.bta_threshold:
             for i_ln in range(k):
                 i_w = i_list[i_ln] / i_sum
                 w = i_obs * i_w
-                w_list.append(w * Ai)
-                w_list.append(w * Ai)
+                w_list.append(w * 0.5)
+                w_list.append(w * 0.5)
 
             for i in range(k):
-                p2_list.append(self.bta)
-                p2_list.append(self.bta)
+                p2_list.append(self.bta_threshold)
+                p2_list.append(self.bta_threshold)
             
             print("Pay Attention! The ratio of Lorentzian components defined in PV function is too small")
             print("That may cause a reasonable result")
@@ -821,9 +840,9 @@ def SLCoupling(_mu_list, _ori_mu_list, _w_list, OriPeaks, SatPeaks,tao, ratio,p2
                 _orbit_name_list.append(_orbit_name)
                 SatPeaks_loc.append(total_index)
                 total_index += 1
-            new_w_list, = cal_SatPeaks(new_mu_list,new_w_list,orbit_names,_orbit_name_list,SatPeaks_loc,p2_list)
+            new_w_list, _child_peaks= cal_SatPeaks(new_mu_list,new_w_list,orbit_names,_orbit_name_list,SatPeaks_loc,p2_list)
                   
-    return new_mu_list,new_w_list
+    return new_mu_list,new_w_list,_child_peaks
 
 def calZeffect(total_energy, n,l,atom_symbol):
     """
@@ -916,6 +935,7 @@ def cal_SatPeaks(new_mu_list,new_w_list,orbit_names,_orbit_name_list,SatPeaks_lo
         
         # each individual splitting peak may have several satellite peaks
         chi_integral_energy = []
+        
         for sp in _child_peaks[k]:
             chi_integral_energy.append(integral_PV_single([new_w_list[2*sp],new_w_list[2*sp+1]], new_mu_list[sp],
                                                                              [p2_list[2*sp],p2_list[2*sp+1]]))
@@ -939,11 +959,12 @@ def cal_SatPeaks(new_mu_list,new_w_list,orbit_names,_orbit_name_list,SatPeaks_lo
         for sp in _child_peaks[k]:
             _w_list[2*sp] = new_w_list[2*sp] / ratio_list[k] * practice_ratio
             _w_list[2*sp+1] = new_w_list[2*sp+1] / ratio_list[k] * practice_ratio
+
     
 
     print('The Integrated Energy ratio for satellite peak of {} is {}'.format(__name,base_line) )   
 
-    return _w_list,
+    return _w_list,_child_peaks
 
 """
 def splt_energy():

@@ -904,7 +904,7 @@ class WPEMsolver(object):
                     p2_list[p2_ln] = 0.5
                     p2_list[p2_ln + 1] = 0.5
 
-        # bta<bta_threshold, the initial values of γi and σi^2 are set to bta, and all of Ai are 0.5.
+        # bta<bta_threshold, the initial values of γi and σi^2 are set to bta_threshold, and all of Ai are 0.5.
         elif self.bta < self.bta_threshold:
             for i_ln in range(k):
                 i_w = i_list[i_ln] / i_sum
@@ -913,8 +913,8 @@ class WPEMsolver(object):
                 w_list.append(w * Ai)
 
             for i in range(k):
-                p2_list.append(self.bta)
-                p2_list.append(self.bta)
+                p2_list.append(self.bta_threshold)
+                p2_list.append(self.bta_threshold)
             
             print("Pay Attention! The ratio of Lorentzian components defined in PV function is too small")
             print("That may cause a reasonable result")

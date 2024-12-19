@@ -299,6 +299,7 @@ class TwiceFilter:
 
         #  if choose 'multivariate gaussian', WPEM models the background function as a multivariate gaussian of diffraction angles with variance
         elif bac_var_type == 'multivariate gaussian' :
+            print('hetet')
             if noise == None :
                 kernel = 1 * RBF() + WhiteKernel()
                 model = Gpr(kernel = kernel, n_restarts_optimizer = 10, alpha = 0, normalize_y = True, random_state = 0).fit(np.array(Twotheta).reshape(-1,1), BacOrigPoint)
@@ -327,7 +328,7 @@ class TwiceFilter:
                     print(angle[j], end=', ', file=wfid)
                     print(float(background_meanfunction[j]), file=wfid)
 
-
+        
             plt.plot(angle, background_meanfunction,  color='k', label='background means')
             plt.plot(angle, Intensity_mean - Intensity_dev,  'g--',lw=1)
             plt.plot(angle, Intensity_mean + Intensity_dev, 'g--',lw=1)
@@ -402,7 +403,7 @@ class TwiceFilter:
         plt.savefig('./ConvertedDocuments/de_backgroundfittingcurve.png',dpi=800)
         plt.show()
         plt.clf()
-
+        print('\n================================')
         return standard_deviation
 
     def chunks(self, arr, m):

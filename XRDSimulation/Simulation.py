@@ -552,6 +552,19 @@ def lattice_parameters_to_matrix(a, b, c, alpha, beta, gamma):
 
 
 
+def lattice_matrix_to_lattice_constants(lattice_vectors):
+    lattice_vectors = np.array(lattice_vectors)
+    a = np.linalg.norm(lattice_vectors[0])
+    b = np.linalg.norm(lattice_vectors[1])
+    c = np.linalg.norm(lattice_vectors[2])
+
+    alpha = np.arccos(np.dot(lattice_vectors[1], lattice_vectors[2]) / (b * c))
+    beta = np.arccos(np.dot(lattice_vectors[0], lattice_vectors[2]) / (a * c))
+    gamma = np.arccos(np.dot(lattice_vectors[0], lattice_vectors[1]) / (a * b))
+
+    return a, b, c, alpha, beta, gamma
+
+
 def write_vasp_file(matrix, atom, filename,PeriodicArr=[1,1,1]):
     with open(filename, 'w') as file:
         atom_count = count_atoms(atom)

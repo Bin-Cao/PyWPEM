@@ -224,7 +224,7 @@ class Decomposedpeaks():
                 dec_peaks_data = dec_peaks_data.drop(index3[0])
 
                 # fitted amorphous crystalline inten
-                Amorphous_fitting_data = pd.read_csv(r'./DecomposedComponents/M_Amorphous_whole_profile.csv', header=None,  names=['two_theta', 'intensity'])
+                Amorphous_fitting_data = pd.read_csv(r'./DecomposedComponents/Amorphous.csv', header=None,  names=['two_theta', 'intensity'])
                 index4 = np.where((Amorphous_fitting_data.two_theta < lowboundary) | (Amorphous_fitting_data.two_theta > upboundary))
                 Amorphous_fitting_data = Amorphous_fitting_data.drop(index4[0])
 
