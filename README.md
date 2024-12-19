@@ -8,10 +8,10 @@
 
 
 
-🤝🤝🤝 Please star ⭐️ it for promoting open source projects 🌍 ! Thanks !
 
 
-## Structure / 结构
+
+## Structure 
 
 ``` javascript
 PyWPEM/
