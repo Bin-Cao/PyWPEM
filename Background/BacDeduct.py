@@ -5,9 +5,15 @@ import re
 import numpy as np
 import copy
 import os
+import heapq
+import numpy.fft as nf
+from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor as Gpr
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
+import xml.etree.ElementTree as ET
+import re
+import pandas as pd
 
 class TwiceFilter:
     """
@@ -26,33 +32,6 @@ class TwiceFilter:
         self.segement = segement
         os.makedirs('ConvertedDocuments', exist_ok=True)
 
-    def convert_file(self, file_name):
-        """
-        Convert "Free Format(2Theta, step, 2ThetaF)" to "X,Y Data"
-
-        This function is defined to convert the XRD diffractometer output file format
-        into a WPEM acceptable input file
-
-        file_name : The file name of original XRD data (Free Format(2Theta, step, 2ThetaF))
-        """
-        digital_pattern = re.compile(r'[0-9.]+')
-        intensity = []
-        with open(file_name, 'r') as xrdfid:
-            first_line = xrdfid.readline()
-            tmp_list = digital_pattern.findall(first_line)
-            start = float(tmp_list[0])
-            step = float(tmp_list[1])
-            end = float(tmp_list[2])
-            while tmp_list:
-                tmp_list = digital_pattern.findall(xrdfid.readline())
-                for i in tmp_list:
-                    intensity.append(float(i))
-
-        two_theta = np.arange(start, end + step, step)
-        with open(os.path.join('ConvertedDocuments', 'intensity.csv'), 'w') as wfid:
-            for i in range(len(intensity)):
-                print(two_theta[i], end=',', file=wfid)
-                print(intensity[i], file=wfid)
 
     def FFTandSGFilter(self, intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
                        polyorder=3,  poly_n=6, mode='nearest', bac_var_type='constant',noise=None):
@@ -103,9 +82,6 @@ class TwiceFilter:
         plt.rcParams['font.family'] = 'sans-serif'
         plt.rcParams['font.size'] = 12
 
-        import heapq
-        import numpy.fft as nf
-        from scipy.signal import savgol_filter
 
         angle = intensity_csv.iloc[:, 0]
         signal = intensity_csv.iloc[:, 1]
@@ -425,3 +401,69 @@ def reorder_vector(EBenergy, inten):
     sorted_EBenergy, sorted_inten = zip(*sorted_data)
     return np.array(sorted_EBenergy), np.array(sorted_inten)
 
+
+def convert_file(file_name):
+    """
+    Convert "Free Format(2Theta, step, 2ThetaF)" to "X,Y Data"
+
+    This function is defined to convert the XRD diffractometer output file format
+    into a WPEM acceptable input file
+
+    file_name : The file name of original XRD data (Free Format(2Theta, step, 2ThetaF))
+    """
+    digital_pattern = re.compile(r'[0-9.]+')
+    intensity = []
+    with open(file_name, 'r') as xrdfid:
+        first_line = xrdfid.readline()
+        tmp_list = digital_pattern.findall(first_line)
+        start = float(tmp_list[0])
+        step = float(tmp_list[1])
+        end = float(tmp_list[2])
+        while tmp_list:
+            tmp_list = digital_pattern.findall(xrdfid.readline())
+            for i in tmp_list:
+                intensity.append(float(i))
+
+    two_theta = np.arange(start, end + step, step)
+    with open(os.path.join('ConvertedDocuments', 'intensity.csv'), 'w') as wfid:
+        for i in range(len(intensity)):
+            print(two_theta[i], end=',', file=wfid)
+            print(intensity[i], file=wfid)
+    return True
+
+def read_xrdml(file):
+    """
+    Takes a file path to an xrdml-file as argument and returns a pd with 
+    2-theta as keys and intensity counts as values
+    """
+    
+    f = ET.parse(file)
+    root = f.getroot()
+
+    # Check for namespace
+    namespace_check = re.match(r'\{.*\}', root.tag)
+    namespace = '' if namespace_check is None else namespace_check.group(0)
+    
+    # Get the scan section
+    scan = root.find(f'.//{namespace}scan')
+    # Extract the data
+    try:
+        intensities = scan.find(f'.//{namespace}intensities').text.split()
+    except:
+        intensities = scan.find(f'.//{namespace}counts').text.split()
+    intensities = [eval(x) for x in intensities]
+    
+    # 2Theta data
+    axis = scan.find(f'.//{namespace}positions[@axis="2Theta"]')
+    
+    startPosition = float(axis.find(f'.//{namespace}startPosition').text)
+    endPosition = float(axis.find(f'.//{namespace}endPosition').text)
+    step = (endPosition - startPosition) / (len(intensities) - 1)
+
+    tt = [startPosition + n*step for n in range(len(intensities))]
+    
+    data = list(zip(tt, intensities))
+    df = pd.DataFrame(data)
+    df.to_csv('ConvertedDocuments/intensity.csv', index=False)
+
+    return True

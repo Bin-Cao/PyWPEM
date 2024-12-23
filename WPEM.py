@@ -73,7 +73,7 @@ XRDSimulation:
 """
 
 from .EMBraggOpt.EMBraggSolver import WPEMsolver
-from .Background.BacDeduct import TwiceFilter
+from .Background.BacDeduct import TwiceFilter, convert_file,read_xrdml
 from .Amorphous.fitting.AmorphousFitting import Amorphous_fitting
 from .Amorphous.QuantitativeCalculation.AmorphousRDF import RadialDistribution
 from .DecomposePlot.plot import Decomposedpeaks
@@ -143,6 +143,8 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     :param cpu : int default = 4, the number of processors
     :param num : int default = 3, the number of the strongest peaks used in calculating mass fraction
     :param EXACT : Boolean default = False, True for exact calculation of mass fraction by diffraction intensity theory
+    :param Cu_tao: The restriction on the diffraction intensities of copper Kα1 and Kα2 rays.
+    :param Ave_Waves: A boolean, default is False. Set to True to optimize using the average wavelength of Kα1 and Kα2.
     :param loadParams : Boolean default = False, for loading parameters
     :param ZeroShift : If ZeroShift == True and the standard sample is available, the instrument offset can be calibrated
     :return: An instantiated model
@@ -221,7 +223,7 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
 def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
                     polyorder=3, poly_n=6, mode='nearest', bac_var_type='constant', Model='XRD',noise=None,segement=None):
     """
-    :param intensity_csv: the experimental observation
+    :param intensity_csv: the dir of experimental XRD data
     :param LFctg: low frequency filter Percentage, default  = 0.5
     :param lowAngleRange: low angle (2theta) with obvious background lift phenomenon
     :param bac_num: the number of background points in the background set
@@ -253,15 +255,41 @@ def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, 
     :param noise:
             float, default is None 
             the noise level applied to gaussian processes model
+    :param segement:
+            A list containing the background point range. It can be easily defined by the user to manually adjust the background domains.
     :return:
         std of the background distribution
     """
     module = TwiceFilter(Model,segement)
     return module.FFTandSGFilter(intensity_csv, LFctg, lowAngleRange, bac_num, bac_split, window_length,polyorder,  poly_n, mode, bac_var_type,noise)
     
-def FileTypeCovert(file_name):
-    module = TwiceFilter()
-    return module.convert_file(file_name)
+def FileTypeCovert(file_name, file_type='dat'):
+    """
+    Convert XRD data from different file formats to the appropriate format.
+
+    :param file_name: str
+        The name of the original XRD data file (including file extension).
+    
+    :param file_type: str, optional, default='dat'
+        The type of the original XRD data file. Can be 'dat' or 'xrdml'.
+        - 'dat': Process the file as a .dat format.
+        - 'xrdml': Process the file as a .xrdml format.
+
+    :return: Processed data (depending on the file type)
+    """
+    if file_type == 'dat':
+        # Convert .dat file
+        print('The converted data are saved in the ConvertedDocuments folder.')
+        return convert_file(file_name)
+    elif file_type == 'xrdml':
+        # Read .xrdml file
+        print('The converted data are saved in the ConvertedDocuments folder.')
+        return read_xrdml(file_name)
+    else:
+        # Handle unsupported file type
+        print(f"Unsupported file type: {file_type}. Please use 'dat' or 'xrdml'.")
+        return None
+
 
 def Amorphous_fit(mix_component,amor_file = None, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
     """
