@@ -294,7 +294,7 @@ def FileTypeCovert(file_name, file_type='dat'):
 def Amorphous_fit(mix_component,amor_file = None, ang_range = None, sigma2_coef = 0.5, max_iter = 5000, peak_location = None,Wavelength = 1.54184):
     """
     :param mix_component : the number of amorphous peaks 
-    :param amor_file : the amorphous file locatio
+    :param amor_file : the amorphous file locationn
     :param ang_range : default is None
         two theta range of study, e.g., ang_range = (20,80)
     :param sigma2_coef : default is 0.5
@@ -312,6 +312,41 @@ def Amorphous_fit(mix_component,amor_file = None, ang_range = None, sigma2_coef 
     return Amorphous_fitting(mix_component, amor_file,ang_range, sigma2_coef, max_iter, peak_location,Wavelength)
 
 def AmorphousRDFun(wavelength=1.54184, amor_file=None,r_max = 5,density_zero=None,Nf2=None,highlight= 4,value=0.6):
+    """
+    Function to compute the radial distribution function (RDF) for amorphous materials based on X-ray diffraction data.
+    
+    Reference: 
+        J. Chem. Phys. 2, 551 (1934); https://doi.org/10.1063/1.1749528
+
+    :param wavelength: float, optional, default=1.54184
+        The wavelength of the X-ray used for diffraction. Typically set to 1.54184 Å for Cu Kα radiation.
+
+    :param amor_file: str, optional, default=None
+        The file path to the amorphous phase intensity data. If not provided, the function will search for the default file 
+        located at '/DecomposedComponents/Amorphous.csv'.
+
+    :param r_max: float, optional, default=5
+        The maximum radius (in Å) from the center in the RDF plot. Defines the range of the radial distribution function.
+
+    :param density_zero: float, optional, default=None
+        The average density of the sample in atoms per cubic centimeter (atoms/cc). This is needed to calculate the 
+        atomic distribution in the material.
+
+    :param Nf2: float, optional, default=None
+        The effective number of atoms in the sample (N) multiplied by the atom scattering intensity (Aa). This is used 
+        to compute the intensity contributions of each atomic species.
+
+    :param highlight: int, optional, default=4
+        The number of peaks to highlight in the RDF plot. Peaks are marked in the graphical output for easier visualization.
+
+    :param value: float, optional, default=0.6
+        Assumes that scattering can be treated as independent at sin(θ/λ) = 0.6. This parameter influences how scattering 
+        is modeled for the RDF calculation.
+
+    :return: tuple
+        Returns the RDF plot and specified peaks.
+    
+    """
     module = RadialDistribution(wavelength, r_max)
     return module.RDF(amor_file,density_zero,Nf2,highlight,value)
 
