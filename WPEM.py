@@ -354,7 +354,7 @@ def Plot_Components(lowboundary, upboundary, wavelength, density_list=None, name
     """
     :param lowboundary : float, the smallest diffraction angle studied
     :param upboundary : float, the largest diffraction angle studied 
-    :param wavelength : list, the wavelength of the X rays
+    :param wavelength : list, the wavelength of the X-ray
     :param density_list : list default is None, the densities of crytal, can be calculated by fun. WPEM.CIFpreprocess()
         e.g., 
         _,_,d1 = WPEM.CIFpreprocess()
@@ -364,13 +364,20 @@ def Plot_Components(lowboundary, upboundary, wavelength, density_list=None, name
     :param Macromolecule: whether it contains amorphous, used in amorphous fitting
     :param phase: the number of compounds contained in diffraction signals
     :param Pic_Title: Whether to display the title of the pictures, some title is very long
+    :param lifting : list, whether to lift the base of each components
     """
     module = Decomposedpeaks()
     return module.decomposition_peak(lowboundary, upboundary, wavelength,density_list,name, Macromolecule ,phase,Pic_Title,lifting)
 
-def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90, 0.01),SuperCell=False,PeriodicArr=[3,3,3],ReSolidSolution = None, RSSratio=0.1, Vacancy=False, Vacancy_atom = None, Vacancy_ratio = None,GrainSize = None,LatticCs = None,PeakWidth=True, CSWPEMout = None,orientation=None,thermo_vib=None,zero_shift = None, bacI=False,seed=42):
+def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90, 0.01),SuperCell=False,PeriodicArr=[3,3,3],ReSolidSolution = None, RSSratio=0.1,
+                   Vacancy=False, Vacancy_atom = None, Vacancy_ratio = None,GrainSize = None,LatticCs = None,PeakWidth=True, CSWPEMout = None,
+                   orientation=None,thermo_vib=None,zero_shift = None, bacI=False,seed=42):
     """
     :param filepath (str): file path of the cif file to be calculated
+    :param wavelength: The wavelength can be specified as either a
+                float or a string. If it is a string, it must be one of the
+                supported definitions in the dict of WAVELENGTHS.
+                Defaults to "CuKa", i.e, Cu K_alpha radiation.
     :param two_theta_range ([float of length 2]): Tuple for range of
         two_thetas to calculate in degrees. Defaults to (0, 90). Set to
         None if you want all diffracted beams within the limiting
@@ -395,10 +402,14 @@ def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90, 0.01),Supe
     :param GrainSize
         The default value is 'none,' or you can input a float representing 
         the grain size within a range of 5-30 nanometers.
+    :param LatticCs: The lattice constants after WPEM refinement. The default is None. 
+        If set to None, WPEM reads lattice constants from an input CIF file. Read parameters from CIF by using ..Extinction.XRDpre.
     :param PeakWidth
         PeakWidth=False, The peak width of the simulated peak is 0
         PeakWidth=True, The peak width of the simulated peak is set to the peak obtained by WPEM
     :param CSWPEMout : location of corresponding Crystal System WPEMout file
+        if None, PEM simulates the peaks as the default Voigt function
+        else WPEM simulates the peaks by the decomposed peak shapes
     :param orientation: The default value is 'none,' or you can input a list such as [-0.2, 0.3],
         adjusting intensity within the range of (1-20%)I to (1+30%)I.
     :param thermo_vib: The default is 'none,' or you can input a float, for example, thermo_vib=0.05, 
@@ -414,26 +425,62 @@ def XRDSimulation(filepath,wavelength='CuKa',two_theta_range=(10, 90, 0.01),Supe
     
 def CIFpreprocess(filepath, wavelength='CuKa',two_theta_range=(10, 90),latt = None, AtomCoordinates = None,show_unitcell=False,cal_extinction=True,relaxation=False):
     """
-    for a single crystal
-    Computes the XRD pattern and save to csv file
-    Args:
-        filepath (str): file path of the cif file to be calculated
-        two_theta_range ([float of length 2]): Tuple for range of
-            two_thetas to calculate in degrees. Defaults to (0, 90). Set to
-            None if you want all diffracted beams within the limiting
-            sphere of radius 2 / wavelength.
-        latt and AtomCoordinates # ['22',['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  # '22' is the space group code
-        This interface is to prevent non-standard cif files from failing to read-in structures,
-        through manual reading and manual input method definition
-        relaxation : whether to relax the structure by M3Gnet relaxation potential field
-    return 
-    latt: lattice constants : [a, b, c, al1, al2, al3]
-    AtomCoordinates : [['Cu2+',0,0,0,],['O-2',0.5,1,1,],.....]  
-    lattic_density: rou
+    For a single crystal:
+    Computes the XRD pattern and saves it to a CSV file.
+
+    :param filepath: str
+        The file path to the CIF file for which the XRD pattern will be calculated.
+    :param wavelength: float or str, optional, default="CuKa"
+        The wavelength of the X-ray. If provided as a string, it must be one of the keys in the WAVELENGTHS dictionary.
+        By default, this is set to "CuKa", corresponding to Cu K_alpha radiation.
+    :param two_theta_range: list of float, length 2, optional, default=(0, 90)
+        A tuple specifying the range of 2θ (in degrees) to calculate. Defaults to (0, 90). 
+        Set to None to include all diffracted beams within the limiting sphere of radius 2 / wavelength.
+    :param latt: list
+        The lattice constants, formatted as [a, b, c, α, β, γ], where `a`, `b`, and `c` are the edge lengths, and 
+        `α`, `β`, and `γ` are the angles between them (in degrees).
+    :param AtomCoordinates: list of lists
+        A list of atomic species and their coordinates in the unit cell, formatted as:
+        [['Cu2+', 0, 0, 0], ['O-2', 0.5, 1, 1], ...].
+        Note: '22' is the space group code.
+        This input interface is designed to handle non-standard CIF files by allowing manual input for structure reading 
+        and method definition.
+    :param relaxation: bool, optional, default=False
+        Whether to relax the structure using the M3Gnet relaxation potential field.
+
+    :return: tuple
+        A tuple containing:
+        - `latt`: The lattice constants [a, b, c, α, β, γ].
+        - `AtomCoordinates`: The atomic species and coordinates in the unit cell, e.g., [['Cu2+', 0, 0, 0], ['O-2', 0.5, 1, 1], ...].
+        - `lattice_density`: The calculated lattice density (ρ).
     """
+
     return profile(wavelength,two_theta_range,show_unitcell,cal_extinction,relaxation).generate(filepath,latt,AtomCoordinates)
 
+
+
 def SubstitutionalSearch(xrd_pattern, cif_file,random_num=8, wavelength='CuKa',search_cap=50,SolventAtom = None, SoluteAtom= None,max_iter = 100,cal_extinction=True):
+    """
+        :param xrd_pattern: str
+        The path to the experimental XRD diffraction pattern of a single crystal, containing 2theta and intensity values. 
+        :param cif_file: str
+            The path to the CIF (Crystallographic Information File) associated with the crystal structure.
+        :param random_num: int
+            The number of times the structure will be randomly initialized to establish the training dataset for BGO.
+        :param wavelength: float or str, optional, default="CuKa"
+            The wavelength of the X-ray used. If provided as a string, it must be one of the keys in the WAVELENGTHS dictionary. 
+            By default, this is set to "CuKa", which corresponds to Cu K_alpha radiation.
+        :param search_cap: int
+            This parameter limits the number of combinations considered during the search to avoid excessive memory usage. It helps to truncate the search process and prevent memory overflow.
+        :param solvent_atoms: str, optional, default=None
+            The solvent atoms in the system. If not provided, it defaults to None. For example, SolventAtom = 'Cu'.
+        :param solute_atoms: str, optional, default=None
+            The solute atoms in the system. If not provided, it defaults to None. For example, SoluteAtom = 'Ti'.
+        :param max_iter: int
+            The maximum number of iterations to run during the computation.
+        :param cal_extinction: bool, optional, default=False
+            Whether to consider the extinction effect in the calculation. Set to `True` if the extinction effect should be included, `False` otherwise.
+        """
     return BgolearnOpt(xrd_pattern, cif_file, random_num,wavelength,search_cap,cal_extinction). Substitutional_SS(SolventAtom, SoluteAtom ,max_iter)
 
 

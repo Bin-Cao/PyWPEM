@@ -18,7 +18,8 @@ from .DiffractionGrometry.atom import atomics
 from ..EMBraggOpt.WPEMFuns.SolverFuns import theta_intensity_area
         
 class XRD_profile(object):
-    def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),SuperCell=False,PeriodicArr=[3,3,3],ReSolidSolution = None, RSSratio=0.1,  GrainSize = None, LatticCs = None,PeakWidth=True, CSWPEMout = None):
+    def __init__(self,filepath,wavelength='CuKa',two_theta_range=(10, 90,0.01),SuperCell=False,PeriodicArr=[3,3,3],ReSolidSolution = None, RSSratio=0.1,  
+                 GrainSize = None, LatticCs = None,PeakWidth=True, CSWPEMout = None):
         """
         # filepath: The path of the CIF file
         
