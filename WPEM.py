@@ -425,10 +425,10 @@ def XPSfit(Var, atomIdentifier, satellitePeaks,no_bac_df, original_df, bacground
     :param Var: Variance of the background intensity.
     :param atomIdentifier: List of atom identifiers. 
         - Each element is a list describing the electron state and binding energy.
-        - Example: [['Cu2+', '2p3/2', 935.6], ['Cu2+', '2p1/2', 938.4], ['Cu+', '2p1/2', 934.6]].
+        - Example:  [['CuII','2p3/2',933.7,],['CuII','2p1/2',954,],]
     :param satellitePeaks: List of satellite peaks.
         - Each element is a list describing the electron state and satellite peak energy.
-        - Example: [['Cu2+', '2p3/2', 934.8], ['Cu2+', '2p3/2', 934.9], ['Cu+', '2p1/2', 933.7]].
+        - Example: [['CuII', '2p3/2',941.6,],['CuII','2p3/2',943.4],['CuII','2p1/2',962.5,],]
     :param no_bac_df: DataFrame containing the direct electron binding energy pattern.
     :param original_df: DataFrame containing the experimentally observed XPS data.
     :param bacground_df: DataFrame containing the fitted background pattern.
@@ -483,28 +483,54 @@ def XPSfit(Var, atomIdentifier, satellitePeaks,no_bac_df, original_df, bacground
     print('WPEM-XPS program running time : ', Durtime)
     return Durtime
 
-def EXAFSfit(XAFSdata,  power = 2, distance = 5, k_point = 8,k = 3,s= None,window_size=30,hop_size=None,Extend=50,name = 'unknown',transform ='fourier',de_bac = False,Ezero = None, first_cutoff_energy=None,second_cutoff_energy=None):
+def EXAFSfit(XAFSdata,  power = 2, distance = 5, k_point = 8,k = 3,s= None,window_size=30,hop_size=None,Extend=50,name = 'unknown',
+             transform ='fourier',de_bac = False,Ezero = None, first_cutoff_energy=None,second_cutoff_energy=None):
     """
-    :param XAFSdata : the document name of input data 
-    :param k_point :  default k_point = 8, the cut off range of k points
-    :param de_bac : default de_bac = False, 
-        has been processed to remove the absorption background
-    :param k : int, optional
-        Degree of the smoothing spline.  Must be 1 <= `k` <= 5.
-        ``k = 3`` is a cubic spline. Default is 3.
-        s : float or None, optional
-        Positive smoothing factor used to choose the number of knots.  Number
-        of knots will be increased until the smoothing condition is satisfied::
-
-            sum((w[i] * (y[i]-spl(x[i])))**2, axis=0) <= s
-
-        If `s` is None, ``s = len(w)`` which should be a good value if
-        ``1/w[i]`` is an estimate of the standard deviation of ``y[i]``.
-        If 0, spline will interpolate through all data points. Default is None.
-
-    :param transform, default is 'wavelet', the inverse transform manner, 'wavelet', 'fourier'
-    :paramCutoff_energy: The data behind cutoff energy will be used to calculate the mean absorption.
-
+    Parameters:
+    -----------
+    XAFSdata : str
+        The name of the input data.
+    power : int, optional, default=2
+        Scales the y-axis for larger k-ranges, compensating for weaker signals at high k values.
+    distance : float, optional, default=5
+        The maximum radial distance in real space (R-space).
+    k_point : int, optional, default=8
+        The cutoff range for k points.
+    k : int, optional, default=3
+        Degree of the smoothing spline (1 ≤ k ≤ 5). 
+        A cubic spline is used when k=3.
+    s : float or None, optional, default=None
+        Positive smoothing factor for selecting the number of knots. 
+        The smoothing condition is defined as:
+            sum((w[i] * (y[i] - spl(x[i])))**2, axis=0) <= s
+        If `s` is None, it defaults to `len(w)`. If `s=0`, the spline interpolates through all data points.
+    window_size : int, optional, default=30
+        The length of each segment used in FFT analysis.
+    hop_size : int or None, optional, default=None
+        The number of points to overlap between segments. If `None`, defaults to `window_size / 8`.
+    Extend : int, optional, default=50
+        Extends the observed energy range by this value for EXAFS signal analysis.
+    name : str, optional, default='unknown'
+        The chemical formula or name associated with the data.
+    transform : str, optional, default='fourier'
+        The inverse transform method to use. Options are 'wavelet' or 'fourier'.
+    de_bac : bool, optional, default=False
+        Whether to fit and remove the absorption background. This step is typically performed during data collection at a synchrotron light source.
+    Ezero : float or None, optional, default=None
+        The absorption edge energy (E₀). If `None`, the function will estimate E₀ as the energy with the maximum slope in the absorption edge.
+    first_cutoff_energy : float or None, optional, default=None
+        The energy value before the observation range, used to fit the absorption background.
+    second_cutoff_energy : float or None, optional, default=None
+        The energy value after the observation range, used to fit the mean observation after photoelectron ejection.
+    
+    Notes:
+    ------
+    1. The parameter `de_bac` controls whether the absorption background is removed. This is typically unnecessary if data has been preprocessed at the source.
+    2. Parameters related to smoothing splines (`k` and `s`) allow for fine control over the interpolation and smoothing process.
+    3. FFT-related parameters (`window_size`, `hop_size`) influence the frequency-domain analysis of the EXAFS data.
+    Returns:
+    --------
+    Processed EXAFS data ready for further analysis.
     """
     return EXAFS(XAFSdata,  power, distance , k_point ,k,s,window_size,hop_size,Extend,name,transform,de_bac).fit(Ezero , first_cutoff_energy,second_cutoff_energy)
 
