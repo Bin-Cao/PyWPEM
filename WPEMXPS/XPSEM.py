@@ -31,9 +31,9 @@ class XPSsolver(object):
 
     ):
       
-        self.Var = Var # standard deviation of background intensity
+        self.Var = Var # variance of background intensity
         self.asy_C = asy_C # asymmetric parameter for descripting the asymmetric peak
-        self.s_energy = s_energy # asymmetric peak's range, a list
+        self.s_energy = s_energy # asymmetric peak's range, a float
         self.atomIdentifier = atomIdentifier 
         # A list of atom identifiers, please 
         # please put the split electron descriptor together

@@ -4,72 +4,6 @@ module WPEM: The main call interface of WPEM, including the following functions 
 Author: Bin CAO <binjacobcao@gmail.com>
 
 GitHub : https://github.com/Bin-Cao/WPEM
-
-FileTypeCovert:
-    Convert "Free Format (2Theta, step, 2ThetaF)" to "X,Y Data".
-    input:
-        :param file_name (str): File name.
-    output:
-        "X,Y Data" in CSV format.
-
-CIFpreprocess:
-    CIF file processing module.
-    input: 
-        :param filepath (str): File path of the CIF file to be calculated.
-    output:
-        latt (list): Lattice constants [a, b, c, al1, al2, al3].
-        AtomCoordinates (list): Structure factors [['Cu2+', 0, 0, 0], ['O-2', 0.5, 1, 1], ...].
-
-BackgroundFit:
-    Strips the noise from the diffraction pattern.
-    input:
-        :param intensity_csv (str): Experimental measurement file.
-    output:
-        std (float/array): Standard deviation of the background distribution.
-
-XRDfit:
-    Whole pattern decomposition module through EM-Bragg solver.
-    input:
-        :param wavelength (list): List of wavelengths of diffraction waves.
-        :param Var (float or array): Statistical variance of background.
-        :param Lattice_constants (list): Initial values of lattice constants.
-        :param no_bac_intensity_file (str): CSV document containing diffraction intensity without background intensity.
-        :param original_file (str): CSV document containing diffraction intensity.
-        :param background_file (str): CSV document containing the fitted background intensity.
-    output:
-        result_folder : the results.
-
-Amorphous_fit:
-    Amorphous qualitative description module.
-    input:
-        :param mix_component (int): Number of amorphous peaks.
-    output:
-        result_folder : the results.
-
-AmorphousRDFun:
-    Amorphous qualitative description module.
-    input:
-        :param wavelength (float): Wavelength of X-ray.
-    return:
-        circle_x (array): Circle X.
-
-Plot_Components:
-    Decomposition component drawing.
-    input:
-        :param low_boundary (float): The smallest diffraction angle studied.
-        :param up_boundary (float): The largest diffraction angle studied.
-        :param wavelength (list): List of X-ray wavelengths.
-    output:
-        result_folder : the results.
-
-XRDSimulation:
-    XRDSimulation
-    input:
-        :param filepath (str): file path of the cif file to be calculated
-    output:
-        files
-
-... developing
 """
 
 from .EMBraggOpt.EMBraggSolver import WPEMsolver
@@ -488,8 +422,33 @@ def XPSfit(Var, atomIdentifier, satellitePeaks,no_bac_df, original_df, bacground
            iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0., s_energy=[100,1000], tao=0.5, ratio=0.8,
        InitializationEpoch=2,loadParams=False,):
     """
-
-    s_energy : asymmetric peak's range, a list [900,950]
+    :param Var: Variance of the background intensity.
+    :param atomIdentifier: List of atom identifiers. 
+        - Each element is a list describing the electron state and binding energy.
+        - Example: [['Cu2+', '2p3/2', 935.6], ['Cu2+', '2p1/2', 938.4], ['Cu+', '2p1/2', 934.6]].
+    :param satellitePeaks: List of satellite peaks.
+        - Each element is a list describing the electron state and satellite peak energy.
+        - Example: [['Cu2+', '2p3/2', 934.8], ['Cu2+', '2p3/2', 934.9], ['Cu+', '2p1/2', 933.7]].
+    :param no_bac_df: DataFrame containing the direct electron binding energy pattern.
+    :param original_df: DataFrame containing the experimentally observed XPS data.
+    :param bacground_df: DataFrame containing the fitted background pattern.
+    :param energy_range: Energy range studied in the spectrum. Default is None.
+    :param bta: Ratio of Lorentzian components in the Pearson VII (PV) function. Default is 0.8.
+    :param bta_threshold: Preset lower boundary of `bta`, related to algorithm convergence. Default is 0.5.
+    :param limit: Preset lower boundary of sigma², related to algorithm convergence. Default is 0.0005.
+    :param iter_limit: Minimum threshold for the likelihood improvement during iteration. Default is 0.05.
+    :param w_limit: Preset lower boundary of peak weight. Default is 1e-17.
+    :param iter_max: Maximum number of iterations allowed. Default is 40.
+    :param lock_num: Number of consecutive iterations with decreasing log-likelihood before termination. Default is 2.
+    :param asy_C: Asymmetry parameter used to describe asymmetric peaks. Default is 0.
+    :param s_energy: Energy range for asymmetric peak modeling. Energies lower than `s_energy` will be treated as asymmetric peaks. Default is [100, 1000].
+    :param tao: Fine-tuning parameter for binding energy. Ensures smaller changes between iterations, especially when focusing on a few peaks in XPS fitting. Default is 0.5.
+    :param ratio: Adjustment factor for peak location during overfitting.
+        - If the change suggested by the EM algorithm exceeds `tao`, the new peak location is updated as:
+          `new_mu_list[peak] = ratio * ori_mu_list[peak] + (1 - ratio) * new_mu_list[peak]`.
+        - Default is 0.8.
+    :param InitializationEpoch: Number of epochs during initialization where peak locations are frozen to find satisfactory model parameters. Default is 2.
+    :param loadParams: Boolean flag to determine whether to load existing parameters. Default is False.
     """
     time0 = time()
     start_time = datetime.datetime.now()
