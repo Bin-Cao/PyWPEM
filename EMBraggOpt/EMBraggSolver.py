@@ -85,12 +85,24 @@ class WPEMsolver(object):
     # Whole pattern decomposition execution function, implemented by data reading and EM-Bragg iteration
     def cal_output_result(self,):
         lmd = len(self.wavelength)
-        # Read non-background data, and the data format is 2theta-intensity/X-Y data.
-        data = pd.read_csv(self.no_bac_intensity_file, header=None, names=['two_theta', 'intensity'])
+        try:
+            # Read non-background data, and the data format is 2theta-intensity/X-Y data.
+            data = pd.read_csv(self.no_bac_intensity_file, header=None, names=['two_theta', 'intensity'])
+            # Read background data, and the data format is 2theta-intensity/X-Y data.
+            bac_data = pd.read_csv(self.bacground_file, header=None, names=['two_theta', 'intensity'])
+        
+        except FileNotFoundError as e:
+            # print(f"File not found: {e}")
+            # Read non-background data, and the data format is 2theta-intensity/X-Y data.
+            data = pd.read_csv('.ConvertedDocuments/'+self.no_bac_intensity_file, header=None, names=['two_theta', 'intensity'])
+            # Read background data, and the data format is 2theta-intensity/X-Y data.
+            bac_data = pd.read_csv('.ConvertedDocuments/'+self.bacground_file, header=None, names=['two_theta', 'intensity'])
+        except pd.errors.EmptyDataError:
+            print("The file is empty!")
+            
         # Read raw/original data, and the data format is 2theta-intensity/X-Y data.
         in_data = pd.read_csv(self.original_file, header=None, names=['two_theta', 'intensity'])
-        # Read background data, and the data format is 2theta-intensity/X-Y data.
-        bac_data = pd.read_csv(self.bacground_file, header=None, names=['two_theta', 'intensity'])
+        
 
         # Detect whether the user restricts the fitting range, and cut the diffranction range 
         if type(self.two_theta_range) == tuple:
