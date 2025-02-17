@@ -728,13 +728,20 @@ def getHeavyatom(s):
     return re.sub(r'[^A-Za-z]+', "", s)
     # Use the re.sub() function to replace all non-letter characters in s with an empty string. Return the modified string.
 
+
+
 def grid_atom():
     hh, kk, ll = np.mgrid[-11:13:1, -11:13:1, -11:13:1]
     grid = np.c_[hh.ravel(), kk.ravel(), ll.ravel()]
-    sorted_indices = np.argsort(np.linalg.norm(grid, axis=1))
-    grid = grid[sorted_indices]
+    distances = np.linalg.norm(grid, axis=1)
+    grid = grid[distances < 13]
+    distances = distances[distances < 13]
     index_of_origin = np.where((grid[:, 0] == 0) & (grid[:, 1] == 0) & (grid[:, 2] == 0))[0][0]
+    # Place the origin at the first position in the array
     grid[[0, index_of_origin]] = grid[[index_of_origin, 0]]
+    distances[[0, index_of_origin]] = distances[[index_of_origin, 0]]
+    sorted_indices = np.argsort(distances)
+    grid = grid[sorted_indices]
     return grid
 
 
