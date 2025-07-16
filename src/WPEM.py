@@ -46,7 +46,7 @@ print('='*100)
 def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, density_list=None, two_theta_range = None,structure_factor = None, 
         bta=0.8, bta_threshold = 0.5,limit=0.0005, iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0.5, s_angle=50, 
         subset_number=9, low_bound=65, up_bound=80, InitializationEpoch=2, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =3, EXACT = False,
-        Cu_tao = None, Ave_Waves = False,loadParams=False, ZeroShift=False,wk_dir=None):
+        Cu_tao = None, Ave_Waves = False,loadParams=False, ZeroShift=False,work_dir=None):
     """
     :param wavelength: list type, The wavelength of diffraction waves
     :param Var: a constant or a array, Statistical variance of background 
@@ -119,7 +119,7 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
 
     initial_peak_file = []
     for task in range(MultiTasks):
-        initial_peak_file_task = os.path.join(wk_dir, "peak{task}.csv".format(task=task))
+        initial_peak_file_task = os.path.join(work_dir, "peak{task}.csv".format(task=task))
         initial_peak_file.append(initial_peak_file_task)
     # List of The file name of initial (2theta data)
     
@@ -128,7 +128,7 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
         Lattice_constants, density_list, singal, no_bac_intensity_file,  original_file,
         bacground_file, two_theta_range, initial_peak_file,  bta,  bta_threshold,
         limit,  iter_limit, w_limit, iter_max,  lock_num,  structure_factor,  MODEL,
-        InitializationEpoch,Macromolecule, cpu,  num, EXACT, Cu_tao,loadParams,ZeroShift,wk_dir
+        InitializationEpoch,Macromolecule, cpu,  num, EXACT, Cu_tao,loadParams,ZeroShift,work_dir
     )
         
     Rp, Rwp, i_ter, flag,ini_CL = Inst_WPEM.cal_output_result()

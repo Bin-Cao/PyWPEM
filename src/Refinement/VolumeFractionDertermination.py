@@ -10,7 +10,7 @@ from ..XRDSimulation.Simulation import cal_atoms
 from ..Extinction.XRDpre import find_atomic_mass
 
 class VandMFraction:
-    def __init__(self, timename,work_dir): 
+    def __init__(self, timename,work_dir=None): 
         timename = timename
         self.namey = timename.tm_year
         self.nameM = timename.tm_mon

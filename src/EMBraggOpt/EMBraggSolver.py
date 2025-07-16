@@ -18,7 +18,7 @@ import os
 timename = time.localtime(time.time())
 namey, nameM, named, nameh, namem = timename.tm_year, timename.tm_mon, timename.tm_mday, timename.tm_hour, timename.tm_min
 BLD = BraggLawDerivation()
-VFD = VandMFraction(timename)
+
 
 """
 This class is the core solver of WPEM
@@ -36,6 +36,7 @@ class WPEMsolver(object):
         loadParams, ZeroShift,wk_dir = None
 
     ):
+        VFD = VandMFraction(timename,wk_dir)
         self.wavelength = wavelength # wavelength
         self.Var = Var # standard deviation of background intensity
         self.asy_C = asy_C # asymmetric parameter for descripting the asymmetric peak
