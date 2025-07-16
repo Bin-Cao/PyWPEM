@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Auto XRD Refinement Toolkit"
+authors:
+  - family-names: Cao
+    given-names: Bin
+    orcid: https://orcid.org/0000-0001-7273-6779
+date-released: 2025-07-01
+version: 1.0.0
+doi: https://doi.org/10.6084/m9.figshare.28078985
+repository-code: https://github.com/Bin-Cao/PyWPEM
+url: https://github.com/Bin-Cao/PyWPEM
+license: MIT
+type: software
