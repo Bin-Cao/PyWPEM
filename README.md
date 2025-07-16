@@ -16,27 +16,9 @@
 ``` javascript
 PyWPEM/
     __init__.py
+    
     WPEM.py
-    Extinction/ 
-        __init__.py
-        CifReader.py
-        XRDpre.py
-        wyckoff/
-          __init__.py
-          wyckoff_dict.py 
-    Background/
-        __init__.py
-        BacDeduct.py
-    EMBraggOpt/
-        __init__.py
-        EMBraggSolver.py
-        BraggLawDerivation.py
-        WPEMFuns/
-            __init__.py
-            SolverFuns.py
-    Refinement/
-        __init__.py
-        VolumeFractionDertermination.py
+
     Amorphous/
         fitting/
             __init__.py
@@ -44,19 +26,65 @@ PyWPEM/
         QuantitativeCalculation/
             __init__.py
             AmorphousRDF.py
+
+    Background/
+        __init__.py
+        BacDeduct.py
+
     DecomposePlot/
         __init__.py
         plot.py
+
+
+
+    EMBraggOpt/
+        __init__.py
+        EMBraggSolver.py
+        BraggLawDerivation.py
+        WPEMFuns/
+            __init__.py
+            SolverFuns.py
+
+
+
+    Extinction/ 
+        __init__.py
+        CifReader.py
+        XRDpre.py
+        wyckoff/
+          __init__.py
+          wyckoff_dict.py 
+        m3gnet/
+        
+    GraphStructure/
+            __init__.py
+            graph.py    
+
+
+    Plot/
+        __init__.py
+        UnitCell.py
+
+
+
+    Refinement/
+        __init__.py
+        VolumeFractionDertermination.py
+    
+    StructureOpt/
+        __init__.py
+        SiteOpt.py
+
     XRDSimulation/
         __init__.py
         Simulation.py
         DiffractionGrometry/
             __init__.py
             atom.py
-    Raman/
-        Decompose/
-            __init__.py
-            RamanFitting.py
+
+
+
+
     WPEMXAS/
             __init__.py
             EXAFS.py
@@ -64,15 +92,9 @@ PyWPEM/
     WPEMXPS/
             __init__.py
             XPSEM.py
-    Plot/
-            __init__.py
-            UnitCell.py
-    StructureOpt/
-            __init__.py
-            SiteOpt.py
-    GraphStructure/
-            __init__.py
-            graph.py
+
+
+
 ``` 
 
 ## Tables
