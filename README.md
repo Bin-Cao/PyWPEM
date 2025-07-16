@@ -83,6 +83,10 @@ PyWPEM/
     WPEMXPS/
             __init__.py
             XPSEM.py
+
+    refs/
+        International_Union_of_Crystallography.pdf
+        WPEM_Manual.pdf
 ``` 
 
 ## Tables
