@@ -11,7 +11,7 @@
 
 
 
-## Structure 
+## Modules 
 
 ``` javascript
 PyWPEM/
@@ -35,8 +35,6 @@ PyWPEM/
         __init__.py
         plot.py
 
-
-
     EMBraggOpt/
         __init__.py
         EMBraggSolver.py
@@ -44,8 +42,6 @@ PyWPEM/
         WPEMFuns/
             __init__.py
             SolverFuns.py
-
-
 
     Extinction/ 
         __init__.py
@@ -60,12 +56,9 @@ PyWPEM/
             __init__.py
             graph.py    
 
-
     Plot/
         __init__.py
         UnitCell.py
-
-
 
     Refinement/
         __init__.py
@@ -82,23 +75,17 @@ PyWPEM/
             __init__.py
             atom.py
 
-
-
-
     WPEMXAS/
             __init__.py
             EXAFS.py
             fftdemo.ipynb
+
     WPEMXPS/
             __init__.py
             XPSEM.py
-
-
-
 ``` 
 
 ## Tables
-
 
 
 <h1 align="center">
