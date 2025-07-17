@@ -36,7 +36,7 @@ class WPEMsolver(object):
         loadParams, ZeroShift,wk_dir = None
 
     ):
-        VFD = VandMFraction(timename,wk_dir)
+        self.VFD = VandMFraction(timename,wk_dir)
         self.wavelength = wavelength # wavelength
         self.Var = Var # standard deviation of background intensity
         self.asy_C = asy_C # asymmetric parameter for descripting the asymmetric peak
@@ -462,11 +462,11 @@ class WPEMsolver(object):
                                 print(sig_list_match[j], file=wfid)
         
             if self.EXACT == False:
-                VFD.Volome_Fraction_Cal(crystal_sys_set,self.num, self.density_list, EXACT=False)
+                self.VFD.Volome_Fraction_Cal(crystal_sys_set,self.num, self.density_list, EXACT=False)
             elif self.EXACT == True:
                 if self.structure_factor != None:
                     Mult_list, HKL_list, Theta_list, Intensity_list = VFD.Volome_Fraction_Cal(crystal_sys_set,self.num,self.density_list, EXACT=True)
-                    VFD.get_Volome_Fraction(self.structure_factor, crystal_sys_set, Mult_list, HKL_list, Theta_list,
+                    self.VFD.get_Volome_Fraction(self.structure_factor, crystal_sys_set, Mult_list, HKL_list, Theta_list,
                                             Intensity_list, ini_CL,self.wavelength,)
                 else:
                     print('If you want to get the accurately determined of mass fraction, Please input the structure factor!')

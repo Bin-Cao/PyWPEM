@@ -137,7 +137,7 @@ class VandMFraction:
         if EXACT == False:
             Intensity_list = []
             for system in range(len(crystal_sys_list)):
-                data = pd.read_csv(os.path.join(FRfolder,'CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
+                data = pd.read_csv(os.path.join(self.FRfolder,'CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
                     Task=system, year=self.namey, month=self.nameM, day=self.named, hour=self.nameh,minute=self.namem)))
                 int = np.array(data.intensity)
                 two_theta = np.array(data.mu_i)
@@ -173,7 +173,7 @@ class VandMFraction:
             Theta_list = []
             Intensity_list = []
             for system in range(len(crystal_sys_list)):
-                data = pd.read_csv(os.path.join(FRfolder,'CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
+                data = pd.read_csv(os.path.join(self.FRfolder,'CrystalSystem{Task}_WPEMout_{year}.{month}.{day}_{hour}.{minute}.csv'.format(
                     Task=system, year=self.namey, month=self.nameM, day=self.named, hour=self.nameh,minute=self.namem)))
                 mult = np.array(data.Mult)
                 H = np.array(data.H)
