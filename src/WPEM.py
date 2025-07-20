@@ -3,7 +3,7 @@ module WPEM: The main call interface of WPEM, including the following functions 
 
 Author: Bin CAO <binjacobcao@gmail.com>
 
-GitHub : https://github.com/Bin-Cao/WPEM
+GitHub : https://github.com/Bin-Cao/PyWPEM
 """
 
 from .EMBraggOpt.EMBraggSolver import WPEMsolver
@@ -118,6 +118,8 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
             print('Type Error - the form of input lattice constants are illegal')
 
     initial_peak_file = []
+    if work_dir == None:
+        work_dir = os.getcwd()
     for task in range(MultiTasks):
         initial_peak_file_task = os.path.join(work_dir, "peak{task}.csv".format(task=task))
         initial_peak_file.append(initial_peak_file_task)
