@@ -92,7 +92,7 @@ class EXAFS(object):
             plt.plot(energy, absor, color='k', linewidth=2, )
             plt.xlabel('Energy(eV)' )
             plt.ylabel('\u03BC(E)', )
-            plt.savefig(os.path.join(XASfolder,'NormalizedEnergy_{}.png'.format(self.name)),dpi=800)
+            plt.savefig(os.path.join(self.XASfolder,'NormalizedEnergy_{}.png'.format(self.name)),dpi=800)
             plt.show()
             plt.clf()
 
@@ -126,7 +126,7 @@ class EXAFS(object):
         plt.axvline(Ezero,linestyle='--',color='b',)
         plt.xlabel('Energy(eV)' )
         plt.ylabel('\u03BC(E)', )
-        plt.savefig(os.path.join(XASfolder,'Splinefun_{}.png'.format(self.name)),dpi=800)
+        plt.savefig(os.path.join(self.XASfolder,'Splinefun_{}.png'.format(self.name)),dpi=800)
         plt.show()
         plt.clf()
 
@@ -134,7 +134,7 @@ class EXAFS(object):
         plt.plot(_energy, np.zeros(len(_energy)), '--',color='r', )
         plt.xlabel('Energy(eV)' )
         plt.ylabel('\u03BC(E)', )
-        plt.savefig(os.path.join(XASfolder,'SmoothEnergy_{}.png'.format(self.name)),dpi=800)
+        plt.savefig(os.path.join(self.XASfolder,'SmoothEnergy_{}.png'.format(self.name)),dpi=800)
         plt.show()
         plt.clf()
   
@@ -150,7 +150,7 @@ class EXAFS(object):
         plt.plot(K_space, np.zeros(len(K_space)), '--',color='r', )
         plt.xlabel('k(A\u207b\u00b9)', )
         plt.ylabel('\u03c7(k)', )
-        plt.savefig(os.path.join(XASfolder,'Kspace_{}.png'.format(self.name)),dpi=800)
+        plt.savefig(os.path.join(self.XASfolder,'Kspace_{}.png'.format(self.name)),dpi=800)
         plt.show()
         plt.clf()
 
@@ -160,17 +160,17 @@ class EXAFS(object):
         plt.plot(K_space, np.zeros(len(K_space)), '--',color='r', )
         plt.xlabel('k(A\u207b\u00b9)' )
         plt.ylabel(f'k{self.power} \u03c7(k) (A\u00B0-{self.power})' )
-        plt.savefig(os.path.join(XASfolder,'Kspace_enhanced_absorption_{}.png'.format(self.name)),dpi=800)
+        plt.savefig(os.path.join(self.XASfolder,'Kspace_enhanced_absorption_{}.png'.format(self.name)),dpi=800)
         plt.show()
         plt.clf()
 
         # fourier transform
         if self.transform == 'fourier':
             r_dis, intensity = inverse_fourier_transform(K_space, _edge_frac,self.distance)
-            plot_two_dim(K_space, _edge_frac,self.distance,self.window_size,self.hop_size,type='STFT')
+            plot_two_dim(K_space, _edge_frac,self.distance,self.window_size,self.hop_size,self.XASfolder,type='STFT')
         elif self.transform == 'wavelet':
             r_dis, intensity = inverse_wavelet_transform(K_space, _edge_frac,self.distance)
-            plot_two_dim(K_space, _edge_frac,self.distance,self.window_size,self.hop_size,type='WT')
+            plot_two_dim(K_space, _edge_frac,self.distance,self.window_size,self.hop_size,self.XASfolder,type='WT')
         else:
             print('Unknown transform, please input transform as a string of wavelet or fourier')
 
@@ -178,7 +178,7 @@ class EXAFS(object):
         plt.plot(r_dis, intensity, color='k', linewidth=2,)
         plt.xlabel('radial distance (A\u00B0)')
         plt.ylabel(f' |\u03c7(R)| (A\u00B0-{self.power+1})', )
-        plt.savefig(os.path.join(XASfolder,'FFT_EXAFS_{}.png'.format(self.name)),dpi=800)
+        plt.savefig(os.path.join(self.XASfolder,'FFT_EXAFS_{}.png'.format(self.name)),dpi=800)
         plt.show()
         plt.clf()
 
@@ -287,7 +287,7 @@ def find_max_slope_x(x, y, s=0.1):
 
     return max_slope_x
 
-def plot_two_dim(Kpoint, Intensity,real_point,window_size,hop_size,type='STFT'):
+def plot_two_dim(Kpoint, Intensity,real_point,window_size,hop_size,XASfolder,type='STFT'):
     num_points = len(Kpoint) * 10
     rel_dis = np.linspace(0, real_point, num_points)
     R, K = np.meshgrid(rel_dis,Kpoint) # along the real space axis

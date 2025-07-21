@@ -38,6 +38,8 @@ class XRD_profile(object):
         # LatticCs: The lattice constants after WPEM refinement. The default is None. If set to None, WPEM reads lattice constants from an input CIF file. Read parameters from CIF by using ..Extinction.XRDpre.
 
         """
+        if work_dir is None:
+            work_dir = os.getcwd()
         self.ReSolidSolution = ReSolidSolution
         self.RSSratio = RSSratio
         if type(ReSolidSolution) == list:
@@ -120,10 +122,8 @@ class XRD_profile(object):
         # Define the font of the image
         plt.rcParams['font.family'] = 'sans-serif'
         plt.rcParams['font.size'] = 12
-        if work_dir is None:
-            self.Simfolder = 'Simulation_WPEM'
-        else:
-            self.Simfolder = os.path.join(work_dir, 'Simulation_WPEM')
+        
+        self.Simfolder = os.path.join(work_dir, 'Simulation_WPEM')
 
         os.makedirs(self.Simfolder, exist_ok=True)
 
@@ -143,14 +143,14 @@ class XRD_profile(object):
             _Atom_coordinate = self.Atom_coordinate
             Latticematrix = lattice_parameters_to_matrix(self.LatticCs[0], self.LatticCs[1], self.LatticCs[2], self.LatticCs[3], self.LatticCs[4], self.LatticCs[5])
             print("The nearest neighbor atoms are :",find_closest_atoms(group_elements_by_first_element(_Atom_coordinate), Latticematrix))
-            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), os.path.join(Simfolder,'CrySits_{}.vasp'.format(self.filepath[-11:-4])))
+            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), os.path.join(self.Simfolder,'CrySits_{}.vasp'.format(self.filepath[-11:-4])))
             
         elif type(self.ReSolidSolution) == list: 
             _Atom_coordinate = ReplaceAtom(self.Atom_coordinate,self.ReSolidSolution,self.RSSratio,Vacancy, Vacancy_atom, Vacancy_ratio,self.LatticCs,seed)
             Latticematrix = lattice_parameters_to_matrix(self.LatticCs[0]*self.PeriodicArr[0], self.LatticCs[1]*self.PeriodicArr[1], self.LatticCs[2]*self.PeriodicArr[2], self.LatticCs[3], self.LatticCs[4], self.LatticCs[5])
             print("The nearest neighbor atoms are :",find_closest_atoms(group_elements_by_first_element(_Atom_coordinate), Latticematrix))
-            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), os.path.join(Simfolder,'CrySits_{}.vasp'.format(self.filepath[-11:-4])),self.PeriodicArr)
-        
+            write_vasp_file(Latticematrix, group_elements_by_first_element(_Atom_coordinate), os.path.join(self.Simfolder,'CrySits_{}.vasp'.format(self.filepath[-11:-4])),self.PeriodicArr)
+
         else: print("ReSolidSolution is not a list")
         FHKL_square = [] # [FHKL2_1, FHKL2_2,...] a list has the same length with HKL_list
         if self.ReSolidSolution == None: 
@@ -242,8 +242,8 @@ class XRD_profile(object):
             plt.xlabel('2\u03b8\u00B0')
             plt.ylabel('I (a.u.)')
             ax.legend()
-            plt.savefig(os.path.join(Simfolder,'{}_Simulation_profile.png'.format(self.filepath[-11:-4])), dpi=800)
-            plt.savefig(os.path.join(Simfolder,'{}_Simulation_profile.svg'.format(self.filepath[-11:-4])), dpi=800)
+            plt.savefig(os.path.join(self.Simfolder,'{}_Simulation_profile.png'.format(self.filepath[-11:-4])), dpi=800)
+            plt.savefig(os.path.join(self.Simfolder,'{}_Simulation_profile.svg'.format(self.filepath[-11:-4])), dpi=800)
             plt.show()
             plt.clf()
         else: pass
@@ -255,7 +255,7 @@ class XRD_profile(object):
             for i in range(len(Ints)):
                 res.append([i+1, self.HKL_list[i][0], self.HKL_list[i][1], self.HKL_list[i][2], self.Mult[i], self.mu_list[i],Ints[i]])
             res.insert(0, ['No.', 'H', 'K', 'L', 'Mult', '2theta/','Ints/'])
-            save_file = os.path.join(Simfolder,'{}_Bragg_peaks.csv'.format(self.filepath[-11:-4]))
+            save_file = os.path.join(self.Simfolder,'{}_Bragg_peaks.csv'.format(self.filepath[-11:-4]))
             dataFile = open(save_file, 'w')
             dataWriter = csv.writer(dataFile)
             dataWriter.writerows(res)
@@ -265,7 +265,7 @@ class XRD_profile(object):
             for i in range(len(x_sim)):
                 profile.append([i+1, x_sim[i], nor_y[i]])
             profile.insert(0, ['No.', 'x_simu', 'y_simu'])
-            save_file = os.path.join(Simfolder,'{}_Simu_profile.csv'.format(self.filepath[-11:-4]))
+            save_file = os.path.join(self.Simfolder,'{}_Simu_profile.csv'.format(self.filepath[-11:-4]))
             dataFile = open(save_file, 'w')
             dataWriter = csv.writer(dataFile)
             dataWriter.writerows(profile)

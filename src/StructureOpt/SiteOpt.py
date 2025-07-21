@@ -46,18 +46,23 @@ class BgolearnOpt(object):
         matches = re.findall(r'(\d+\.\d+)', ','.join(first_row)) 
         LatticCs = [float(match) for match in matches] 
         if type(wavelength) == list:
-            _, Atom_coordinate = profile(wavelength=wavelength[0],cal_extinction=cal_extinction).generate(cif_file)
-        else:_, Atom_coordinate = profile(wavelength=wavelength,cal_extinction=cal_extinction).generate(cif_file)
+            _, Atom_coordinate,_ = profile(wavelength=wavelength[0],cal_extinction=cal_extinction).generate(cif_file)
+        else:_, Atom_coordinate,_ = profile(wavelength=wavelength,cal_extinction=cal_extinction).generate(cif_file)
 
         self.LatticCs = LatticCs
         self.crystal_system = det_system(LatticCs)
         self.Atom_coordinate = Atom_coordinate   
         self.code =  data['code'].tolist()
- 
-        if isinstance(wavelength, (float, int, list)):
-            self.wavelength = wavelength
+        
+        if isinstance(wavelength, (float, int)):
+            self.wavelength = [wavelength, wavelength]
+        elif isinstance(wavelength, list):
+            if len(wavelength) == 1:
+                self.wavelength = [wavelength[0], wavelength[0]]
+            elif len(wavelength) == 2:
+                self.wavelength = wavelength
         elif isinstance(wavelength, str):
-            self.wavelength = [WAVELENGTHS[wavelength]]
+            self.wavelength = [WAVELENGTHS[wavelength], WAVELENGTHS[wavelength]]
         else:
             raise TypeError("'wavelength' must be either of: float, int, list or str")
         
@@ -173,7 +178,7 @@ class BgolearnOpt(object):
                         # don't save the information of worse structure : response_vector,  Intensity_list
                         # Delete the stored structure information, the structure is not a satisfactory structure
                         feature_matrix.pop()
-                        print('feature_matrix',feature_matrix)
+                        #print('feature_matrix',feature_matrix)
                 else: response_vector.append(score)
                 
             else:
@@ -250,7 +255,7 @@ class BgolearnOpt(object):
         plt.plot(o_x, simulation_ori_peak,'--',label="Initial lattice structure")
         plt.plot(o_x, simulation_opt_peak,'-.',label="Searched lattice structure - Bgolearn")
         plt.legend()
-        plt.savefig(os.path.join(SOfolder,'substitutional.png'), dpi=800)
+        plt.savefig(os.path.join(self.SOfolder,'substitutional.png'), dpi=800)
         plt.show()
     
         return real_structure
@@ -271,7 +276,7 @@ class BgolearnOpt(object):
 def random_substitute(Atom_coordinat,SolventAtom,SoluteAtom,n_atom=None):
     acoord = copy.deepcopy(Atom_coordinat)
     indices = [i for i, item in enumerate(acoord) if item[0] == SolventAtom]
-    random.shuffle(indices) 
+    random.shuffle(indices)
 
     if n_atom is None:
         n_atom = random.randint(1, len(indices)-1)

@@ -280,7 +280,7 @@ class TwiceFilter:
 
         #  if choose 'multivariate gaussian', WPEM models the background function as a multivariate gaussian of diffraction angles with variance
         elif bac_var_type == 'multivariate gaussian' :
-            print('hetet')
+    
             if noise == None :
                 kernel = 1 * RBF() + WhiteKernel()
                 model = Gpr(kernel = kernel, n_restarts_optimizer = 10, alpha = 0, normalize_y = True, random_state = 0).fit(np.array(Twotheta).reshape(-1,1), BacOrigPoint)
