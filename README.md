@@ -2,105 +2,116 @@
 <h1 align="center">
   <a href=""><img src="https://github.com/Bin-Cao/TCGPR/assets/86995074/28f69830-4ece-43b3-a887-e78fdb25bcab" alt="WPEM" width="150"></a>
   <br>
-  PyWPEM
+  <b>PyWPEM</b>
   <br>
 </h1>
 
+<p align="center">
+  Python Toolkit for Wave Packet-based Electron Microscopy (WPEM) Simulation, Analysis, and Refinement.
+</p>
 
+<p align="center">
+  <a href="https://pyxplore.netlify.app/">Documentation</a> | <a href="#">Paper (Coming Soon)</a>
+</p>
 
-[Intro](https://pyxplore.netlify.app/) | Paper  
+---
 
+## 📦 Module Overview
 
-## Modules 
-
-``` javascript
+```text
 PyWPEM/
-    __init__.py
-    
-    WPEM.py
+├── __init__.py
+├── WPEM.py
+│
+├── Amorphous/
+│   ├── fitting/
+│   │   ├── __init__.py
+│   │   └── AmorphousFitting.py
+│   └── QuantitativeCalculation/
+│       ├── __init__.py
+│       └── AmorphousRDF.py
+│
+├── Background/
+│   ├── __init__.py
+│   └── BacDeduct.py
+│
+├── DecomposePlot/
+│   ├── __init__.py
+│   └── plot.py
+│
+├── EMBraggOpt/
+│   ├── __init__.py
+│   ├── EMBraggSolver.py
+│   ├── BraggLawDerivation.py
+│   └── WPEMFuns/
+│       ├── __init__.py
+│       └── SolverFuns.py
+│
+├── Extinction/
+│   ├── __init__.py
+│   ├── CifReader.py
+│   ├── XRDpre.py
+│   ├── wyckoff/
+│   │   ├── __init__.py
+│   │   └── wyckoff_dict.py
+│   └── m3gnet/
+│
+├── GraphStructure/
+│   ├── __init__.py
+│   └── graph.py
+│
+├── Plot/
+│   ├── __init__.py
+│   └── UnitCell.py
+│
+├── Refinement/
+│   ├── __init__.py
+│   └── VolumeFractionDertermination.py
+│
+├── StructureOpt/
+│   ├── __init__.py
+│   └── SiteOpt.py
+│
+├── XRDSimulation/
+│   ├── __init__.py
+│   ├── Simulation.py
+│   └── DiffractionGrometry/
+│       ├── __init__.py
+│       └── atom.py
+│
+├── WPEMXAS/
+│   ├── __init__.py
+│   ├── EXAFS.py
+│   └── fftdemo.ipynb
+│
+├── WPEMXPS/
+│   ├── __init__.py
+│   └── XPSEM.py
+│
+└── refs/
+    ├── International_Union_of_Crystallography.pdf
+    └── WPEM_Manual.pdf
+```
 
-    Amorphous/
-        fitting/
-            __init__.py
-            AmorphousFitting.py
-        QuantitativeCalculation/
-            __init__.py
-            AmorphousRDF.py
+---
 
-    Background/
-        __init__.py
-        BacDeduct.py
+## 📊 Tables & Figures
 
-    DecomposePlot/
-        __init__.py
-        plot.py
+<p align="center">
+  <img src="https://github.com/Bin-Cao/PyWPEM/assets/86995074/4a41f979-ff0c-48d7-8830-d7638811aad2" alt="WPEM Table 1" width="650">
+</p>
 
-    EMBraggOpt/
-        __init__.py
-        EMBraggSolver.py
-        BraggLawDerivation.py
-        WPEMFuns/
-            __init__.py
-            SolverFuns.py
+<p align="center">
+  <img src="https://github.com/Bin-Cao/PyWPEM/assets/86995074/a04b60fd-f9b2-4b2d-bc1a-c8227d9dc811" alt="WPEM Table 2" width="650">
+</p>
 
-    Extinction/ 
-        __init__.py
-        CifReader.py
-        XRDpre.py
-        wyckoff/
-          __init__.py
-          wyckoff_dict.py 
-        m3gnet/
-        
-    GraphStructure/
-            __init__.py
-            graph.py    
+---
 
-    Plot/
-        __init__.py
-        UnitCell.py
+## 📚 Citation
 
-    Refinement/
-        __init__.py
-        VolumeFractionDertermination.py
-    
-    StructureOpt/
-        __init__.py
-        SiteOpt.py
+If you use this toolkit in your research, please cite:
 
-    XRDSimulation/
-        __init__.py
-        Simulation.py
-        DiffractionGrometry/
-            __init__.py
-            atom.py
-
-    WPEMXAS/
-            __init__.py
-            EXAFS.py
-            fftdemo.ipynb
-
-    WPEMXPS/
-            __init__.py
-            XPSEM.py
-
-    refs/
-        International_Union_of_Crystallography.pdf
-        WPEM_Manual.pdf
-``` 
-
-## Tables
-
-
-<h1 align="center">
-  <a href=""><img src="https://github.com/Bin-Cao/PyWPEM/assets/86995074/4a41f979-ff0c-48d7-8830-d7638811aad2" alt="WPEM" width="650"></a>
-</h1>
-
-<h1 align="center">
-  <a href=""><img src="https://github.com/Bin-Cao/PyWPEM/assets/86995074/a04b60fd-f9b2-4b2d-bc1a-c8227d9dc811" alt="WPEM" width="650"></a>
-</h1>
-
-
+```bibtex
 @misc{cao2025pyxplore,
   author       = {Bin Cao and Tong-Yi Zhang},
   title        = {PyXplore (Revision 56c956f)},
@@ -109,4 +120,5 @@ PyWPEM/
   doi          = {10.57967/hf/6055},
   publisher    = {Hugging Face}
 }
+```
 
