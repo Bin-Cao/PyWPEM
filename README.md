@@ -7,7 +7,7 @@
 </h1>
 
 <p align="center">
-  Python Toolkit for Wave Packet-based Electron Microscopy (WPEM) Simulation, Analysis, and Refinement.
+  Python Toolkit for XRD Simulation, Analysis, and Refinement.
 </p>
 
 <p align="center">
