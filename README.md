@@ -115,10 +115,20 @@ If you use this toolkit in your research, please cite:
 @misc{cao2025pyxplore,
   author       = {Bin Cao and Tong-Yi Zhang},
   title        = {PyXplore (Revision 56c956f)},
-  year         = 2025,
+  year         = {2025},
   url          = {https://huggingface.co/datasets/caobin/PyXplore},
   doi          = {10.57967/hf/6055},
   publisher    = {Hugging Face}
+}
+
+@patent{zhang2025em_xrd,
+  author       = {Tong-Yi Zhang and Bin Cao and Zhenjie Feng and Qiling Xiao and Zihan Wang and Qian Zhang and Jiahao Wang},
+  title        = {A Full Spectrum Line Fitting Method for Powder X-ray Diffraction Patterns Based on Statistical Modeling and Expectation-Maximization Algorithm},
+  type         = {Patent},
+  number       = {ZL202210408314.X},
+  national     = {CN},
+  year         = {2025},
+  note         = {Authorization No.: CN 114972185 B, Authorized on April 11, 2025},
 }
 ```
 
