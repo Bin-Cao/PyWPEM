@@ -2,13 +2,13 @@
 <h1 align="center">
   <a href=""><img src="https://github.com/Bin-Cao/TCGPR/assets/86995074/28f69830-4ece-43b3-a887-e78fdb25bcab" alt="WPEM" width="150"></a>
   <br>
-  [PyWPEM](https://pyxplore.netlify.app/)
+  PyWPEM
   <br>
 </h1>
 
 
 
-
+[Intro](https://pyxplore.netlify.app/) | Paper  
 
 
 ## Modules 
