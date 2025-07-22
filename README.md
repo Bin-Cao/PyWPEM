@@ -100,3 +100,13 @@ PyWPEM/
   <a href=""><img src="https://github.com/Bin-Cao/PyWPEM/assets/86995074/a04b60fd-f9b2-4b2d-bc1a-c8227d9dc811" alt="WPEM" width="650"></a>
 </h1>
 
+
+@misc{cao2025pyxplore,
+  author       = {Bin Cao and Tong-Yi Zhang},
+  title        = {PyXplore (Revision 56c956f)},
+  year         = 2025,
+  url          = {https://huggingface.co/datasets/caobin/PyXplore},
+  doi          = {10.57967/hf/6055},
+  publisher    = {Hugging Face}
+}
+
