@@ -14,6 +14,7 @@
   <a href="https://pyxplore.netlify.app/">Documentation</a> | <a href="#">Paper (Coming Soon)</a>
 </p>
 
+[View package usage statistics / download counts](https://www.pepy.tech/projects/PyXplore)
 ---
 
 ## 📦 Module Overview
