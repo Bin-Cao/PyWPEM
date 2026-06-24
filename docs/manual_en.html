@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyWPEM English Manual</title>
+  <meta name="description" content="PyWPEM English manual: installation, data preparation, single-phase and multiphase XRD refinement, simulation, in situ batch processing, solid-solution search, amorphous analysis, XPS, and outputs.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="manual-book">
+  <header class="manual-topbar">
+    <div class="shell manual-topbar-inner">
+      <a class="brand" href="index.html"><img src="figs/Logo.jpg" alt="PyWPEM"><span>PyWPEM</span></a>
+      <div class="manual-switch">
+        <a href="manual_zh.html">中文说明书</a>
+        <a class="active" href="manual_en.html">English Manual</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="manual-layout shell">
+    <aside class="manual-toc">
+      <p class="toc-title">Contents</p>
+      <a href="#intro">1. Overview</a>
+      <a href="#install">2. Installation</a>
+      <a href="#data">3. Data Preparation</a>
+      <a href="#single">4. Single-Phase XRD</a>
+      <a href="#multi">5. Multiphase XRD</a>
+      <a href="#simulation">6. XRD Simulation</a>
+      <a href="#insitu">7. In Situ Batch</a>
+      <a href="#solid">8. Solid Solution</a>
+      <a href="#amorphous">9. Amorphous Analysis</a>
+      <a href="#xps">10. XPS</a>
+      <a href="#outputs">11. Outputs</a>
+      <a href="#troubleshooting">12. Troubleshooting</a>
+    </aside>
+
+    <article class="manual-content">
+      <section class="manual-title">
+        <p class="eyebrow">PyWPEM / PyXplore</p>
+        <h1>English Manual</h1>
+        <p>This manual is distilled from the public APIs in <code>src</code> and the Jupyter examples in <code>Tutorial</code>. It covers common PyWPEM analysis workflows, key parameters, and output files.</p>
+      </section>
+
+      <section id="intro">
+        <h2>1. Overview</h2>
+        <p>PyWPEM is a Python toolkit for whole-pattern X-ray diffraction decomposition and structure refinement. It treats the measured diffraction pattern as a physics-constrained probabilistic mixture and updates peak positions, peak shapes, peak weights, and lattice constants through EM iterations coupled with Bragg-law consistency.</p>
+        <p>The usual entry point is <code>from PyXplore import WPEM</code>. The main user-facing functions are:</p>
+        <ul>
+          <li><code>WPEM.BackgroundFit</code>: fit and subtract spectral background.</li>
+          <li><code>WPEM.CIFpreprocess</code>: read CIF files and generate HKL, 2θ, multiplicity, and extinction information.</li>
+          <li><code>WPEM.XRDfit</code>: run whole-pattern WPEM fitting, decomposition, and lattice refinement.</li>
+          <li><code>WPEM.Plot_Components</code>: visualize decomposed phase or peak components.</li>
+          <li><code>WPEM.XRDSimulation</code>: simulate XRD patterns from CIF files.</li>
+          <li><code>WPEM.SubstitutionalSearch</code>: search substitutional solid-solution configurations.</li>
+          <li><code>WPEM.Amorphous_fit</code> and <code>WPEM.AmorphousRDFun</code>: fit amorphous halos and compute RDF.</li>
+          <li><code>WPEM.XPSfit</code>: decompose XPS main and satellite peaks through EM.</li>
+        </ul>
+      </section>
+
+      <section id="install">
+        <h2>2. Installation</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_1_installation" target="_blank" rel="noreferrer">Class 1 Installation</a></p>
+        <p>An isolated conda environment is recommended. The tutorials use Python 3.10.</p>
+        <pre><code>conda create -n pywpem python=3.10
+conda activate pywpem
+pip install notebook
+pip install PyXplore
+pip install --upgrade PyXplore</code></pre>
+        <p>Start Jupyter Notebook:</p>
+        <pre><code>jupyter notebook</code></pre>
+        <p>Test the installation in a notebook or Python script:</p>
+        <pre><code>from PyXplore import WPEM</code></pre>
+      </section>
+
+      <section id="data">
+        <h2>3. Data Preparation</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_2_basic_structure" target="_blank" rel="noreferrer">Class 2 Single-phase refinement</a></p>
+        <h3>3.1 Experimental Pattern</h3>
+        <p>XRD input is normally a two-column file without a header. The first column is <code>2theta</code>; the second column is <code>intensity</code>.</p>
+        <pre><code>10.000, 123.4
+10.010, 125.1
+10.020, 128.7</code></pre>
+        <p>Read a CSV file:</p>
+        <pre><code>import pandas as pd
+intensity_csv = pd.read_csv("intensity.csv", header=None)</code></pre>
+        <p>For in situ or instrument-exported Excel files:</p>
+        <pre><code>intensity_excel = pd.read_excel("intensity.xlsx", header=None)</code></pre>
+
+        <h3>3.2 CIF Files</h3>
+        <p>Prepare one CIF file for each candidate crystalline phase. <code>CIFpreprocess</code> reads lattice constants, atom coordinates, space-group information, and symmetry operations, then writes the HKL files used by the fitting step.</p>
+        <pre><code>latt, atom_coordinates, density = WPEM.CIFpreprocess(
+    filepath="Mn2O3.cif",
+    two_theta_range=(15, 75)
+)</code></pre>
+
+        <h3>3.3 Working Directory</h3>
+        <p>By default, PyWPEM writes folders such as <code>ConvertedDocuments</code>, <code>output_xrd</code>, and <code>WPEMFittingResults</code> in the current directory. For batch processing, use a separate <code>work_dir</code> for every sample to prevent output files from overwriting each other.</p>
+      </section>
+
+      <section id="single">
+        <h2>4. Single-Phase XRD Refinement</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_2_basic_structure" target="_blank" rel="noreferrer">Class 2 Single-phase refinement</a></p>
+        <p>This workflow follows the Mn2O3 single-phase example and is the recommended first complete run.</p>
+        <h3>Step 1: Import and Load Data</h3>
+        <pre><code>from PyXplore import WPEM
+import pandas as pd
+
+intensity_csv = pd.read_csv("intensity.csv", header=None)</code></pre>
+        <h3>Step 2: Fit Background</h3>
+        <pre><code>var = WPEM.BackgroundFit(
+    intensity_csv,
+    lowAngleRange=17,
+    poly_n=13,
+    bac_split=16,
+    bac_num=300
+)</code></pre>
+        <p>This step writes <code>ConvertedDocuments/no_bac_intensity.csv</code> and <code>ConvertedDocuments/bac.csv</code>. If you run inside the data folder, you can pass the generated file names directly. If you use <code>work_dir</code>, pass full paths.</p>
+
+        <h3>Step 3: Preprocess CIF</h3>
+        <pre><code>latt, atom_coordinates, density = WPEM.CIFpreprocess(
+    filepath="Mn2O3.cif",
+    two_theta_range=(15, 75)
+)</code></pre>
+        <p><code>latt</code> is the initial lattice vector in <code>[a, b, c, alpha, beta, gamma]</code> format. <code>density</code> can be used later for mass-fraction estimation.</p>
+
+        <h3>Step 4: Run WPEM Refinement</h3>
+        <pre><code>wavelength = [1.540593, 1.544414]
+Lattice_constants = [latt]
+
+WPEM.XRDfit(
+    wavelength,
+    var,
+    Lattice_constants,
+    "no_bac_intensity.csv",
+    "intensity.csv",
+    "bac.csv",
+    subset_number=11,
+    low_bound=20,
+    up_bound=70,
+    bta=0.85,
+    iter_max=5,
+    asy_C=0,
+    InitializationEpoch=0
+)</code></pre>
+        <h3>Important Parameters</h3>
+        <ul>
+          <li><code>wavelength</code>: X-ray wavelengths. Cu Kα1/Kα2 commonly uses <code>[1.540593, 1.544414]</code>.</li>
+          <li><code>subset_number</code>: number of peaks used for Bragg lattice updates.</li>
+          <li><code>low_bound</code> and <code>up_bound</code>: 2θ range for selecting Bragg-update peaks.</li>
+          <li><code>bta</code>: Lorentzian fraction in the pseudo-Voigt peak shape.</li>
+          <li><code>iter_max</code>: maximum iterations. Use a small number for testing and a larger value for production analysis.</li>
+          <li><code>InitializationEpoch</code>: number of initialization epochs with frozen peak positions.</li>
+        </ul>
+      </section>
+
+      <section id="multi">
+        <h2>5. Multiphase XRD Refinement</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_3_multi_phase" target="_blank" rel="noreferrer">Class 3 Multiphase refinement</a></p>
+        <p>The multiphase workflow is similar to the single-phase workflow, except that every candidate phase must be preprocessed and the lattice constants are passed as a list.</p>
+        <pre><code>from PyXplore import WPEM
+import pandas as pd
+
+intensity_csv = pd.read_csv("intensity.csv", header=None)
+Var = WPEM.BackgroundFit(
+    intensity_csv,
+    LFctg=0.2,
+    lowAngleRange=20,
+    window_length=7,
+    bac_num=500
+)
+
+NaCl, _, density_nacl = WPEM.CIFpreprocess("NaCl.cif", two_theta_range=(11, 110))
+LiCO, _, density_lico = WPEM.CIFpreprocess("Li2CO3.cif", two_theta_range=(11, 110))
+
+wavelength = [1.540593, 1.544414]
+WPEM.XRDfit(
+    wavelength,
+    Var,
+    [NaCl, LiCO],
+    "no_bac_intensity.csv",
+    "intensity.csv",
+    "bac.csv",
+    subset_number=11,
+    low_bound=20,
+    up_bound=50,
+    bta=0.9,
+    iter_max=5,
+    asy_C=0,
+    InitializationEpoch=2,
+    num=7,
+    Ave_Waves=True
+)
+
+WPEM.Plot_Components(
+    lowboundary=10,
+    upboundary=110,
+    wavelength=wavelength,
+    name=["NaCl", "Li2CO3"],
+    phase=2
+)</code></pre>
+        <p><code>phase=2</code> tells the plotting function to draw two crystalline phases. Keep <code>name</code> in the same order as <code>Lattice_constants</code>.</p>
+      </section>
+
+      <section id="simulation">
+        <h2>6. XRD Simulation</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_4_simulation" target="_blank" rel="noreferrer">Class 4 XRD simulations</a></p>
+        <p><code>XRDSimulation</code> generates simulated XRD patterns from CIF files. It is useful for phase validation and synthetic-data generation.</p>
+        <pre><code>FHKL_square, two_theta_sim, intensity_sim = WPEM.XRDSimulation(
+    filepath="PSO.cif",
+    two_theta_range=(10, 120, 0.01),
+    bacI=True,
+    GrainSize=30,
+    orientation=[-0.1, 0.1],
+    thermo_vib=0.1,
+    zero_shift=0.01
+)</code></pre>
+        <ul>
+          <li><code>two_theta_range=(start, stop, step)</code> controls angular range and resolution.</li>
+          <li><code>GrainSize</code> models peak broadening caused by crystallite size.</li>
+          <li><code>orientation</code> models intensity perturbation from preferred orientation.</li>
+          <li><code>thermo_vib</code> models thermal displacement of average atomic positions.</li>
+          <li><code>zero_shift</code> models instrumental zero shift.</li>
+          <li><code>bacI=True</code> adds a random polynomial background.</li>
+        </ul>
+      </section>
+
+      <section id="insitu">
+        <h2>7. In Situ XRD Batch Processing</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_5_InsituXRD" target="_blank" rel="noreferrer">Class 5 In situ XRD</a></p>
+        <p>In situ or operando XRD often contains many sequential patterns. Use a separate temporary folder for every pattern, copy the input and required <code>peak0.csv</code> into that folder, and pass it through <code>work_dir</code>.</p>
+        <pre><code>import os
+import shutil
+import pandas as pd
+from PyXplore import WPEM
+
+wavelength = [1.540593, 1.544414]
+Lattice_constants = [[2.87549, 2.87549, 14.02056, 90.0, 90.0, 120.0]]
+results = {}
+num_samples = 5
+
+for i in range(num_samples):
+    idx = i + 1
+    tmp_dir = f"tmp/{idx}"
+    os.makedirs(tmp_dir, exist_ok=True)
+
+    tmp_intensity = os.path.join(tmp_dir, "intensity.xlsx")
+    shutil.copyfile(f"data/{idx}.xlsx", tmp_intensity)
+    shutil.copyfile("peak0.csv", os.path.join(tmp_dir, "peak0.csv"))
+
+    intensity_excel = pd.read_excel(tmp_intensity, header=None)
+    var = WPEM.BackgroundFit(
+        intensity_excel,
+        lowAngleRange=17,
+        LFctg=0.0,
+        poly_n=8,
+        bac_split=10,
+        bac_num=80,
+        work_dir=tmp_dir
+    )
+
+    no_bac_file = os.path.join(tmp_dir, "ConvertedDocuments", "no_bac_intensity.csv")
+    bac_file = os.path.join(tmp_dir, "ConvertedDocuments", "bac.csv")
+
+    duration, lattice = WPEM.XRDfit(
+        wavelength,
+        var,
+        Lattice_constants,
+        no_bac_file,
+        tmp_intensity,
+        bac_file,
+        Ave_Waves=True,
+        subset_number=6,
+        low_bound=15,
+        up_bound=60,
+        bta=0.85,
+        iter_max=3,
+        asy_C=0,
+        InitializationEpoch=0,
+        work_dir=tmp_dir
+    )
+    results[idx] = lattice</code></pre>
+        <p>After the loop, save the lattice parameters to CSV or Excel and plot them against time, temperature, voltage, or cycle number.</p>
+      </section>
+
+      <section id="solid">
+        <h2>8. Solid-Solution Search</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_6_SolidSolution" target="_blank" rel="noreferrer">Class 6 Solid solution searching</a></p>
+        <p>A typical solid-solution workflow first performs XRD refinement, then uses the WPEM output of one phase to search candidate substitutional structures.</p>
+        <pre><code>WPEM.SubstitutionalSearch(
+    xrd_pattern="CrystalSystem0_WPEMout_2026.6.10_11.1.csv",
+    cif_file="Mn2O3.cif",
+    random_num=20,
+    wavelength="CuKa",
+    search_cap=20,
+    SolventAtom="Mn3+",
+    SoluteAtom="Ru2+",
+    max_iter=15,
+    cal_extinction=False
+)</code></pre>
+        <p>After searching, use <code>XRDSimulation</code> to simulate candidate structures and compare them with the experimental or decomposed pattern.</p>
+      </section>
+
+      <section id="amorphous">
+        <h2>9. Amorphous Analysis</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_7_amorphous" target="_blank" rel="noreferrer">Class 7 Amorphous study</a></p>
+        <p>For semicrystalline or amorphous-rich samples, first decompose crystalline peaks with <code>XRDfit</code>, then fit the remaining broad halo with <code>Amorphous_fit</code>, and optionally compute RDF.</p>
+        <pre><code>wavelength = [1.03]
+Lattice_constants = [[17.53, 17.53, 6.47, 90, 90, 120]]
+
+WPEM.XRDfit(
+    wavelength,
+    var,
+    Lattice_constants,
+    "no_bac_intensity.csv",
+    "intensity.csv",
+    "bac.csv",
+    subset_number=3,
+    low_bound=6,
+    up_bound=16,
+    bta=0.78,
+    iter_max=10,
+    asy_C=0,
+    InitializationEpoch=0
+)
+
+WPEM.Amorphous_fit(
+    mix_component=2,
+    sigma2_coef=0.5,
+    max_iter=200,
+    peak_location=None,
+    Wavelength=1.03
+)
+
+WPEM.Plot_Components(
+    lowboundary=4,
+    upboundary=19,
+    wavelength=wavelength,
+    Macromolecule=True,
+    phase=1
+)
+
+WPEM.AmorphousRDFun(
+    wavelength=1.03,
+    r_max=4,
+    density_zero=None,
+    Nf2=1,
+    highlight=6
+)</code></pre>
+        <p><code>mix_component</code> is the number of amorphous broad-peak components. If approximate positions are known, use <code>peak_location=[20, 30, "fixed"]</code> to fix peak centers.</p>
+      </section>
+
+      <section id="xps">
+        <h2>10. XPS Decomposition</h2>
+        <p class="tutorial-ref">Detailed tutorial: <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_8_XPS" target="_blank" rel="noreferrer">Class 8 X-Ray spectrograph</a></p>
+        <p>PyWPEM includes an EM-based XPS decomposition module. The input is also two columns: binding energy and intensity. Fit the background in XPS mode, then define main peaks and satellite peaks.</p>
+        <pre><code>from PyXplore import WPEM
+import pandas as pd
+
+intensity_csv = pd.read_csv("CuO.csv", header=None)
+var = WPEM.BackgroundFit(
+    intensity_csv,
+    segement=[[910, 931], [948, 952], [958, 959], [966, 970]],
+    bac_num=120,
+    Model="XPS",
+    noise=0.05,
+    bac_var_type="multivariate gaussian"
+)
+
+AtomIdentifier = [
+    ["CuII", "2p3/2", 933.7],
+    ["CuII", "2p1/2", 954]
+]
+
+satellitePeaks = [
+    ["CuII", "2p3/2", 941.6],
+    ["CuII", "2p3/2", 943.4],
+    ["CuII", "2p1/2", 962.5]
+]
+
+WPEM.XPSfit(
+    var,
+    AtomIdentifier,
+    satellitePeaks,
+    "no_bac_intensity.csv",
+    "CuO.csv",
+    "bac.csv",
+    bta=0.80,
+    iter_max=50
+)</code></pre>
+        <p><code>AtomIdentifier</code> defines main peaks in <code>[chemical state, orbital, initial binding energy]</code> format. <code>satellitePeaks</code> defines satellite peaks.</p>
+      </section>
+
+      <section id="outputs">
+        <h2>11. Output Files</h2>
+        <table>
+          <thead><tr><th>Folder or File</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>ConvertedDocuments/no_bac_intensity.csv</code></td><td>Background-subtracted experimental pattern.</td></tr>
+            <tr><td><code>ConvertedDocuments/bac.csv</code></td><td>Estimated background curve.</td></tr>
+            <tr><td><code>output_xrd/*HKL.csv</code></td><td>HKL, d-spacing, 2θ, and multiplicity generated from CIF preprocessing.</td></tr>
+            <tr><td><code>output_xrd/*Extinction_peak.csv</code></td><td>Systematically extinct peaks.</td></tr>
+            <tr><td><code>WPEMFittingResults</code></td><td>XRD fitted profiles, peak parameters, phase outputs, mass-fraction estimates, and model parameters.</td></tr>
+            <tr><td><code>DecomposedComponents</code></td><td>Decomposed peak curves, updated background, and amorphous outputs.</td></tr>
+            <tr><td><code>Simulation_WPEM</code></td><td>Simulated XRD profiles, structure-factor values, and VASP structure files.</td></tr>
+            <tr><td><code>XPSFittingProfile</code></td><td>XPS fitted profiles and peak parameters.</td></tr>
+            <tr><td><code>XPScomponents</code></td><td>XPS component curves.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>12. Troubleshooting</h2>
+        <h3>Input files have different lengths</h3>
+        <p><code>XRDfit</code> requires the original pattern, background-subtracted pattern, and background pattern to have the same number of points. Re-run <code>BackgroundFit</code> and make sure you pass files generated from the same folder.</p>
+        <h3>All peak positions are shifted</h3>
+        <p>Check wavelength and instrumental zero shift. Try <code>ZeroShift=True</code> for fitting or use <code>zero_shift</code> in simulation to understand the direction of the offset.</p>
+        <h3>Multiphase outputs are hard to interpret</h3>
+        <p>Keep <code>Lattice_constants</code>, <code>density_list</code>, <code>name</code>, and phase output order consistent.</p>
+        <h3>Batch outputs are overwritten</h3>
+        <p>Use a separate <code>work_dir</code> for every sample. The in situ workflow uses folders such as <code>tmp/1</code> and <code>tmp/2</code> for this reason.</p>
+        <h3>Background fitting is unsatisfactory</h3>
+        <p>Adjust <code>LFctg</code>, <code>lowAngleRange</code>, <code>bac_split</code>, <code>bac_num</code>, and <code>poly_n</code>. For XPS, use <code>segement</code> to manually specify background regions.</p>
+      </section>
+    </article>
+  </main>
+</body>
+</html>

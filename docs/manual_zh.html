@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyWPEM 中文说明书</title>
+  <meta name="description" content="PyWPEM 中文说明书：从零安装、数据准备、XRD 单相与多相精修、模拟、原位批处理、固溶体搜索、非晶分析、XPS 和输出文件说明。">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="manual-book">
+  <header class="manual-topbar">
+    <div class="shell manual-topbar-inner">
+      <a class="brand" href="index.html"><img src="figs/Logo.jpg" alt="PyWPEM"><span>PyWPEM</span></a>
+      <div class="manual-switch">
+        <a class="active" href="manual_zh.html">中文说明书</a>
+        <a href="manual_en.html">English Manual</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="manual-layout shell">
+    <aside class="manual-toc">
+      <p class="toc-title">目录</p>
+      <a href="#intro">1. 软件简介</a>
+      <a href="#install">2. 安装与环境</a>
+      <a href="#data">3. 数据准备</a>
+      <a href="#single">4. 单相 XRD 精修</a>
+      <a href="#multi">5. 多相 XRD 精修</a>
+      <a href="#simulation">6. XRD 模拟</a>
+      <a href="#insitu">7. 原位批处理</a>
+      <a href="#solid">8. 固溶体搜索</a>
+      <a href="#amorphous">9. 非晶分析</a>
+      <a href="#xps">10. XPS 分解</a>
+      <a href="#outputs">11. 输出文件</a>
+      <a href="#troubleshooting">12. 常见问题</a>
+    </aside>
+
+    <article class="manual-content">
+      <section class="manual-title">
+        <p class="eyebrow">PyWPEM / PyXplore</p>
+        <h1>中文说明书</h1>
+        <p>本说明书根据 <code>src</code> 中的公开 API 和 <code>Tutorial</code> 中的 Jupyter 示例整理，覆盖 PyWPEM 常见分析流程、关键参数和输出文件。</p>
+      </section>
+
+      <section id="intro">
+        <h2>1. 软件简介</h2>
+        <p>PyWPEM 是一个用于 X 射线衍射全谱分解与结构精修的 Python 工具包。它的核心思想是把完整衍射谱看作受物理约束的概率混合分布，并在 EM 迭代中结合 Bragg 定律更新峰位置、峰形、峰权重和晶格参数。</p>
+        <p>最常用的入口来自 <code>from PyXplore import WPEM</code>。主要函数包括：</p>
+        <ul>
+          <li><code>WPEM.BackgroundFit</code>：拟合并扣除背景。</li>
+          <li><code>WPEM.CIFpreprocess</code>：读取 CIF，生成 HKL、2θ、multiplicity 和消光峰。</li>
+          <li><code>WPEM.XRDfit</code>：运行 WPEM 全谱拟合、分峰和晶格精修。</li>
+          <li><code>WPEM.Plot_Components</code>：绘制分相或分峰结果。</li>
+          <li><code>WPEM.XRDSimulation</code>：根据 CIF 模拟 XRD 图谱。</li>
+          <li><code>WPEM.SubstitutionalSearch</code>：搜索固溶体替位结构。</li>
+          <li><code>WPEM.Amorphous_fit</code> 与 <code>WPEM.AmorphousRDFun</code>：非晶宽峰拟合与 RDF 分析。</li>
+          <li><code>WPEM.XPSfit</code>：XPS 主峰和卫星峰的 EM 分解。</li>
+        </ul>
+      </section>
+
+      <section id="install">
+        <h2>2. 安装与环境</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_1_installation" target="_blank" rel="noreferrer">Class 1 Installation</a></p>
+        <p>建议使用独立 conda 环境，避免和系统 Python 或其他科研软件的依赖冲突。教程中推荐 Python 3.10。</p>
+        <pre><code>conda create -n pywpem python=3.10
+conda activate pywpem
+pip install notebook
+pip install PyXplore
+pip install --upgrade PyXplore</code></pre>
+        <p>启动 Jupyter Notebook：</p>
+        <pre><code>jupyter notebook</code></pre>
+        <p>在 notebook 或 Python 脚本中测试导入：</p>
+        <pre><code>from PyXplore import WPEM</code></pre>
+        <p>如果网络下载较慢，可以先配置 pip 镜像源，或在网络稳定环境中安装依赖。</p>
+      </section>
+
+      <section id="data">
+        <h2>3. 数据准备</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_2_basic_structure" target="_blank" rel="noreferrer">Class 2 Single-phase refinement</a></p>
+        <h3>3.1 实验谱文件格式</h3>
+        <p>XRD 输入通常是两列数据，不需要表头：第一列为 <code>2theta</code>，第二列为 <code>intensity</code>。CSV 示例：</p>
+        <pre><code>10.000, 123.4
+10.010, 125.1
+10.020, 128.7</code></pre>
+        <p>读取方式：</p>
+        <pre><code>import pandas as pd
+intensity_csv = pd.read_csv("intensity.csv", header=None)</code></pre>
+        <p>原位 XRD 或部分仪器数据也可以使用 Excel。教程中使用：</p>
+        <pre><code>intensity_excel = pd.read_excel("intensity.xlsx", header=None)</code></pre>
+
+        <h3>3.2 CIF 文件</h3>
+        <p>每个候选晶相建议准备一个 CIF 文件。<code>CIFpreprocess</code> 会读取晶格常数、原子坐标、空间群和对称操作，并生成后续拟合需要的 HKL 文件。</p>
+        <pre><code>latt, atom_coordinates, density = WPEM.CIFpreprocess(
+    filepath="Mn2O3.cif",
+    two_theta_range=(15, 75)
+)</code></pre>
+
+        <h3>3.3 工作目录</h3>
+        <p>默认情况下，PyWPEM 会在当前目录写入 <code>ConvertedDocuments</code>、<code>output_xrd</code>、<code>WPEMFittingResults</code> 等输出目录。批处理时强烈建议为每个样品设置独立 <code>work_dir</code>，避免文件互相覆盖。</p>
+      </section>
+
+      <section id="single">
+        <h2>4. 单相 XRD 精修</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_2_basic_structure" target="_blank" rel="noreferrer">Class 2 Single-phase refinement</a></p>
+        <p>本流程对应教程中的 Mn2O3 单相示例，适合用户第一次完整跑通 PyWPEM。</p>
+        <h3>步骤 1：导入库并读取数据</h3>
+        <pre><code>from PyXplore import WPEM
+import pandas as pd
+
+intensity_csv = pd.read_csv("intensity.csv", header=None)</code></pre>
+        <h3>步骤 2：背景拟合</h3>
+        <pre><code>var = WPEM.BackgroundFit(
+    intensity_csv,
+    lowAngleRange=17,
+    poly_n=13,
+    bac_split=16,
+    bac_num=300
+)</code></pre>
+        <p>该步骤会生成 <code>ConvertedDocuments/no_bac_intensity.csv</code> 和 <code>ConvertedDocuments/bac.csv</code>。如果当前工作目录就是数据目录，后续可以直接使用文件名 <code>no_bac_intensity.csv</code> 和 <code>bac.csv</code>；如果使用 <code>work_dir</code>，建议使用完整路径。</p>
+
+        <h3>步骤 3：CIF 预处理</h3>
+        <pre><code>latt, atom_coordinates, density = WPEM.CIFpreprocess(
+    filepath="Mn2O3.cif",
+    two_theta_range=(15, 75)
+)</code></pre>
+        <p><code>latt</code> 是初始晶格常数，格式为 <code>[a, b, c, alpha, beta, gamma]</code>。<code>density</code> 可用于后续质量分数估计。</p>
+
+        <h3>步骤 4：运行 WPEM 精修</h3>
+        <pre><code>wavelength = [1.540593, 1.544414]
+Lattice_constants = [latt]
+
+WPEM.XRDfit(
+    wavelength,
+    var,
+    Lattice_constants,
+    "no_bac_intensity.csv",
+    "intensity.csv",
+    "bac.csv",
+    subset_number=11,
+    low_bound=20,
+    up_bound=70,
+    bta=0.85,
+    iter_max=5,
+    asy_C=0,
+    InitializationEpoch=0
+)</code></pre>
+        <h3>关键参数解释</h3>
+        <ul>
+          <li><code>wavelength</code>：X 射线波长。Cu Kα1/Kα2 常用 <code>[1.540593, 1.544414]</code>。</li>
+          <li><code>subset_number</code>：用于 Bragg 晶格更新的峰数量。</li>
+          <li><code>low_bound</code>、<code>up_bound</code>：选择参与晶格更新的 2θ 范围。</li>
+          <li><code>bta</code>：伪 Voigt 函数中 Lorentzian 分量比例。</li>
+          <li><code>iter_max</code>：最大迭代次数。首次测试可以设小一些，正式分析可适当增大。</li>
+          <li><code>InitializationEpoch</code>：初始化阶段冻结峰位置的轮数。</li>
+        </ul>
+      </section>
+
+      <section id="multi">
+        <h2>5. 多相 XRD 精修</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_3_multi_phase" target="_blank" rel="noreferrer">Class 3 Multiphase refinement</a></p>
+        <p>多相流程和单相类似，区别是每个候选相都需要运行 <code>CIFpreprocess</code>，并把多个晶格常数组成列表传给 <code>XRDfit</code>。</p>
+        <pre><code>from PyXplore import WPEM
+import pandas as pd
+
+intensity_csv = pd.read_csv("intensity.csv", header=None)
+Var = WPEM.BackgroundFit(
+    intensity_csv,
+    LFctg=0.2,
+    lowAngleRange=20,
+    window_length=7,
+    bac_num=500
+)
+
+NaCl, _, density_nacl = WPEM.CIFpreprocess("NaCl.cif", two_theta_range=(11, 110))
+LiCO, _, density_lico = WPEM.CIFpreprocess("Li2CO3.cif", two_theta_range=(11, 110))
+
+wavelength = [1.540593, 1.544414]
+WPEM.XRDfit(
+    wavelength,
+    Var,
+    [NaCl, LiCO],
+    "no_bac_intensity.csv",
+    "intensity.csv",
+    "bac.csv",
+    subset_number=11,
+    low_bound=20,
+    up_bound=50,
+    bta=0.9,
+    iter_max=5,
+    asy_C=0,
+    InitializationEpoch=2,
+    num=7,
+    Ave_Waves=True
+)
+
+WPEM.Plot_Components(
+    lowboundary=10,
+    upboundary=110,
+    wavelength=wavelength,
+    name=["NaCl", "Li2CO3"],
+    phase=2
+)</code></pre>
+        <p><code>phase=2</code> 表示绘制两个晶相的分解结果。<code>name</code> 的顺序应与 <code>Lattice_constants</code> 中的相顺序一致。</p>
+      </section>
+
+      <section id="simulation">
+        <h2>6. XRD 模拟</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_4_simulation" target="_blank" rel="noreferrer">Class 4 XRD simulations</a></p>
+        <p><code>XRDSimulation</code> 用 CIF 文件生成模拟谱，可用于相鉴定后的验证，也可构造带扰动的训练或测试数据。</p>
+        <pre><code>FHKL_square, two_theta_sim, intensity_sim = WPEM.XRDSimulation(
+    filepath="PSO.cif",
+    two_theta_range=(10, 120, 0.01),
+    bacI=True,
+    GrainSize=30,
+    orientation=[-0.1, 0.1],
+    thermo_vib=0.1,
+    zero_shift=0.01
+)</code></pre>
+        <ul>
+          <li><code>two_theta_range=(start, stop, step)</code> 控制模拟角度范围和步长。</li>
+          <li><code>GrainSize</code> 用于模拟晶粒尺寸导致的峰宽变化。</li>
+          <li><code>orientation</code> 用于模拟择优取向导致的强度扰动。</li>
+          <li><code>thermo_vib</code> 用于模拟原子平均位置的热振动扰动。</li>
+          <li><code>zero_shift</code> 用于模拟仪器零点偏移。</li>
+          <li><code>bacI=True</code> 会加入随机多项式背景。</li>
+        </ul>
+      </section>
+
+      <section id="insitu">
+        <h2>7. 原位 XRD 批处理</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_5_InsituXRD" target="_blank" rel="noreferrer">Class 5 In situ XRD</a></p>
+        <p>原位或 operando XRD 通常包含大量连续谱。推荐给每个谱建立独立临时目录，把输入文件和必要的 <code>peak0.csv</code> 放入该目录，并通过 <code>work_dir</code> 控制输出位置。</p>
+        <pre><code>import os
+import shutil
+import pandas as pd
+from PyXplore import WPEM
+
+wavelength = [1.540593, 1.544414]
+Lattice_constants = [[2.87549, 2.87549, 14.02056, 90.0, 90.0, 120.0]]
+results = {}
+num_samples = 5
+
+for i in range(num_samples):
+    idx = i + 1
+    tmp_dir = f"tmp/{idx}"
+    os.makedirs(tmp_dir, exist_ok=True)
+
+    tmp_intensity = os.path.join(tmp_dir, "intensity.xlsx")
+    shutil.copyfile(f"data/{idx}.xlsx", tmp_intensity)
+    shutil.copyfile("peak0.csv", os.path.join(tmp_dir, "peak0.csv"))
+
+    intensity_excel = pd.read_excel(tmp_intensity, header=None)
+    var = WPEM.BackgroundFit(
+        intensity_excel,
+        lowAngleRange=17,
+        LFctg=0.0,
+        poly_n=8,
+        bac_split=10,
+        bac_num=80,
+        work_dir=tmp_dir
+    )
+
+    no_bac_file = os.path.join(tmp_dir, "ConvertedDocuments", "no_bac_intensity.csv")
+    bac_file = os.path.join(tmp_dir, "ConvertedDocuments", "bac.csv")
+
+    duration, lattice = WPEM.XRDfit(
+        wavelength,
+        var,
+        Lattice_constants,
+        no_bac_file,
+        tmp_intensity,
+        bac_file,
+        Ave_Waves=True,
+        subset_number=6,
+        low_bound=15,
+        up_bound=60,
+        bta=0.85,
+        iter_max=3,
+        asy_C=0,
+        InitializationEpoch=0,
+        work_dir=tmp_dir
+    )
+    results[idx] = lattice</code></pre>
+        <p>批处理完成后，可以把每个样品的晶格参数整理成 Excel 或 CSV，再绘制随时间、温度、电压或循环次数变化的曲线。</p>
+      </section>
+
+      <section id="solid">
+        <h2>8. 固溶体搜索</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_6_SolidSolution" target="_blank" rel="noreferrer">Class 6 Solid solution searching</a></p>
+        <p>固溶体流程通常先做一次 XRD 精修，得到某一晶相的 WPEM 输出文件，再用 <code>SubstitutionalSearch</code> 搜索可能的替位结构。</p>
+        <pre><code>WPEM.SubstitutionalSearch(
+    xrd_pattern="CrystalSystem0_WPEMout_2026.6.10_11.1.csv",
+    cif_file="Mn2O3.cif",
+    random_num=20,
+    wavelength="CuKa",
+    search_cap=20,
+    SolventAtom="Mn3+",
+    SoluteAtom="Ru2+",
+    max_iter=15,
+    cal_extinction=False
+)</code></pre>
+        <p>搜索完成后，可用 <code>XRDSimulation</code> 对候选结构进行模拟，并与实验谱或 WPEM 分解谱比较。</p>
+      </section>
+
+      <section id="amorphous">
+        <h2>9. 非晶分析</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_7_amorphous" target="_blank" rel="noreferrer">Class 7 Amorphous study</a></p>
+        <p>非晶样品通常包含晶体峰和非晶宽峰。推荐先用 <code>XRDfit</code> 分解晶体峰，再用 <code>Amorphous_fit</code> 拟合剩余宽峰，最后可计算 RDF。</p>
+        <pre><code>wavelength = [1.03]
+Lattice_constants = [[17.53, 17.53, 6.47, 90, 90, 120]]
+
+WPEM.XRDfit(
+    wavelength,
+    var,
+    Lattice_constants,
+    "no_bac_intensity.csv",
+    "intensity.csv",
+    "bac.csv",
+    subset_number=3,
+    low_bound=6,
+    up_bound=16,
+    bta=0.78,
+    iter_max=10,
+    asy_C=0,
+    InitializationEpoch=0
+)
+
+WPEM.Amorphous_fit(
+    mix_component=2,
+    sigma2_coef=0.5,
+    max_iter=200,
+    peak_location=None,
+    Wavelength=1.03
+)
+
+WPEM.Plot_Components(
+    lowboundary=4,
+    upboundary=19,
+    wavelength=wavelength,
+    Macromolecule=True,
+    phase=1
+)
+
+WPEM.AmorphousRDFun(
+    wavelength=1.03,
+    r_max=4,
+    density_zero=None,
+    Nf2=1,
+    highlight=6
+)</code></pre>
+        <p><code>mix_component</code> 是非晶宽峰数量。若已知道宽峰大致位置，可用 <code>peak_location=[20, 30, "fixed"]</code> 固定初始峰位。</p>
+      </section>
+
+      <section id="xps">
+        <h2>10. XPS 分解</h2>
+        <p class="tutorial-ref">更详细教程：<a href="https://github.com/Bin-Cao/PyWPEM/tree/main/Tutorial/class_8_XPS" target="_blank" rel="noreferrer">Class 8 X-Ray spectrograph</a></p>
+        <p>PyWPEM 也包含 XPS 的 EM 分解模块。XPS 数据同样是两列：binding energy 和 intensity。通常先用 XPS 模式拟合背景，再定义主峰和卫星峰。</p>
+        <pre><code>from PyXplore import WPEM
+import pandas as pd
+
+intensity_csv = pd.read_csv("CuO.csv", header=None)
+var = WPEM.BackgroundFit(
+    intensity_csv,
+    segement=[[910, 931], [948, 952], [958, 959], [966, 970]],
+    bac_num=120,
+    Model="XPS",
+    noise=0.05,
+    bac_var_type="multivariate gaussian"
+)
+
+AtomIdentifier = [
+    ["CuII", "2p3/2", 933.7],
+    ["CuII", "2p1/2", 954]
+]
+
+satellitePeaks = [
+    ["CuII", "2p3/2", 941.6],
+    ["CuII", "2p3/2", 943.4],
+    ["CuII", "2p1/2", 962.5]
+]
+
+WPEM.XPSfit(
+    var,
+    AtomIdentifier,
+    satellitePeaks,
+    "no_bac_intensity.csv",
+    "CuO.csv",
+    "bac.csv",
+    bta=0.80,
+    iter_max=50
+)</code></pre>
+        <p><code>AtomIdentifier</code> 用于定义主峰，格式为 <code>[化学态, 轨道, 初始结合能]</code>。<code>satellitePeaks</code> 用于定义卫星峰。</p>
+      </section>
+
+      <section id="outputs">
+        <h2>11. 输出文件</h2>
+        <table>
+          <thead><tr><th>目录或文件</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>ConvertedDocuments/no_bac_intensity.csv</code></td><td>扣除背景后的实验谱。</td></tr>
+            <tr><td><code>ConvertedDocuments/bac.csv</code></td><td>拟合得到的背景曲线。</td></tr>
+            <tr><td><code>output_xrd/*HKL.csv</code></td><td>CIF 预处理生成的 HKL、d 间距、2θ 和 multiplicity。</td></tr>
+            <tr><td><code>output_xrd/*Extinction_peak.csv</code></td><td>系统消光峰。</td></tr>
+            <tr><td><code>WPEMFittingResults</code></td><td>XRD 拟合曲线、峰参数、晶相分解结果、质量分数估计和模型参数。</td></tr>
+            <tr><td><code>DecomposedComponents</code></td><td>分峰曲线、更新背景、非晶分解结果。</td></tr>
+            <tr><td><code>Simulation_WPEM</code></td><td>XRD 模拟谱、结构因子和 VASP 结构文件。</td></tr>
+            <tr><td><code>XPSFittingProfile</code></td><td>XPS 拟合曲线和峰参数。</td></tr>
+            <tr><td><code>XPScomponents</code></td><td>XPS 分峰组分曲线。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>12. 常见问题</h2>
+        <h3>文件长度不匹配</h3>
+        <p><code>XRDfit</code> 要求原始谱、扣背景谱和背景谱的点数一致。若出现不匹配，重新运行 <code>BackgroundFit</code>，并确认后续读取的是同一目录下生成的 <code>no_bac_intensity.csv</code> 和 <code>bac.csv</code>。</p>
+        <h3>峰位整体偏移</h3>
+        <p>检查波长是否正确、仪器是否存在零点偏移。必要时测试 <code>ZeroShift=True</code> 或在模拟中设置 <code>zero_shift</code> 理解偏移方向。</p>
+        <h3>多相结果顺序混乱</h3>
+        <p><code>Lattice_constants</code>、<code>density_list</code>、<code>name</code> 和输出晶相编号必须保持同一顺序。</p>
+        <h3>批处理结果被覆盖</h3>
+        <p>为每个样品设置独立 <code>work_dir</code>。原位教程采用 <code>tmp/1</code>、<code>tmp/2</code> 这类结构，就是为了隔离输出。</p>
+        <h3>背景拟合不理想</h3>
+        <p>调整 <code>LFctg</code>、<code>lowAngleRange</code>、<code>bac_split</code>、<code>bac_num</code>、<code>poly_n</code>。XPS 场景可使用 <code>segement</code> 手动指定背景区间。</p>
+      </section>
+    </article>
+  </main>
+</body>
+</html>
