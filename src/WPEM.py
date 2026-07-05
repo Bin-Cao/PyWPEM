@@ -159,7 +159,7 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     return Durtime, ini_CL
 
 def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
-                    polyorder=3, poly_n=6, mode='nearest', bac_var_type='constant', Model='XRD',noise=None,segement=None,work_dir=None):
+                    polyorder=3, poly_n=6, mode='nearest', bac_var_type='constant', Model='XRD',noise=None,segment=None,work_dir=None, **kwargs):
     """
     :param intensity_csv: the dir of experimental XRD data
     :param LFctg: low frequency filter Percentage, default  = 0.5
@@ -193,12 +193,20 @@ def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, 
     :param noise:
             float, default is None 
             the noise level applied to gaussian processes model
-    :param segement:
+    :param segment:
             A list containing the background point range. It can be easily defined by the user to manually adjust the background domains.
     :return:
         std of the background distribution
     """
-    module = TwiceFilter(Model,segement,work_dir)
+    if 'segement' in kwargs:
+        if segment is not None:
+            raise TypeError("Use either 'segment' or deprecated 'segement', not both.")
+        segment = kwargs.pop('segement')
+    if kwargs:
+        unexpected = ', '.join(kwargs)
+        raise TypeError(f"Unexpected keyword argument(s): {unexpected}")
+
+    module = TwiceFilter(Model,segment,work_dir)
     return module.FFTandSGFilter(intensity_csv, LFctg, lowAngleRange, bac_num, bac_split, window_length,polyorder,  poly_n, mode, bac_var_type,noise)
     
 def FileTypeCovert(file_name, file_type='dat'):

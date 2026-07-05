@@ -86,8 +86,13 @@ class RadialDistribution(object):
         for i in r:
             RDF_r = cal_RDF(k, int_k, i)
             RDF_r_list.append(RDF_r)
+        RDF_r_array = np.array(RDF_r_list)
         
         circle_x, circle_y, dis= peak_detect(r,RDF_r_list,highlight)
+        pd.DataFrame({
+            'r': r,
+            'RDF': RDF_r_array
+        }).to_csv(os.path.join(DCfolder,'RDF.csv'), index=False)
         plt.xlabel('r/A\u00b0', )
         plt.ylabel('RDF(r)', )
         plt.plot(r, RDF_r_list,color='k',label="4Pir\u00b2Pu(r)-4Pir\u00b2Pu\u2080(r)")
@@ -98,14 +103,20 @@ class RadialDistribution(object):
         plt.savefig(os.path.join(DCfolder,'RDF.svg'), dpi=800)
         plt.show()
         plt.clf()
-        if density_zero == None: density_zero =40,
+        if density_zero == None: density_zero =40
         elif type(density_zero) == float or type(density_zero) == int: pass
         plt.xlabel('r/A\u00b0',)
         plt.ylabel('RDF(r)', )
         base = 4 * np.pi * r**2 * density_zero
+        RDF_hasbase = RDF_r_array + base
         circle_x, circle_y, dis= peak_detect_based(r,RDF_r_list,base,highlight)
+        pd.DataFrame({
+            'r': r,
+            'base': base,
+            'RDF_hasbase': RDF_hasbase
+        }).to_csv(os.path.join(DCfolder,'RDF_hasbase.csv'), index=False)
         plt.plot(r, base, color='b',linestyle='--',label="4Pir\u00b2Ru\u2080(r)")
-        plt.plot(r, RDF_r_list+ base,color='k',label="4Pir\u00b2Ru(r)")
+        plt.plot(r, RDF_hasbase,color='k',label="4Pir\u00b2Ru(r)")
         plt.scatter(circle_x,circle_y, color='white', marker='o', edgecolors='g', s=200)
         plt.legend()
         plt.savefig(os.path.join(DCfolder,'RDF_hasbase.png'), dpi=800)
@@ -181,6 +192,5 @@ def peak_detect_based(r,RDF_r_list,base, highlight):
         circle_x.append(r[index])
 
     return circle_x, circle_y,circle_x[2]-circle_x[0]
-
 
 

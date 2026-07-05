@@ -25,15 +25,22 @@ class TwiceFilter:
     Smoothing technique Savitzky-Golay filter is applied to improve the signal/noise ratio 
     after inverse Fourier transform and give a set of slowly varying background points
     """
-    def __init__(self, Model='XRD', segement=None, work_dir = None):
+    def __init__(self, Model='XRD', segment=None, work_dir = None, **kwargs):
         """
         Display the background curve of XRD diffraction spectrum (Model='XRD')
         and Raman spectrum (Model='Raman') according to the type
         """
+        if 'segement' in kwargs:
+            if segment is not None:
+                raise TypeError("Use either 'segment' or deprecated 'segement', not both.")
+            segment = kwargs.pop('segement')
+        if kwargs:
+            unexpected = ', '.join(kwargs)
+            raise TypeError(f"Unexpected keyword argument(s): {unexpected}")
 
         # Model = 'XRD' or 'Raman' or 'XPS
         self.Model = Model
-        self.segement = segement
+        self.segment = segment
         if work_dir is None:
             self.dir = 'ConvertedDocuments'
         else:
@@ -129,7 +136,7 @@ class TwiceFilter:
         if bac_split == None:
                 print('You must input the parameter bac_split')
 
-        if self.segement == None:
+        if self.segment == None:
             if type(bac_split) == int:
                 if lowAngleRange == None:
                     choiselg_num = int(bac_num / bac_split)
@@ -163,21 +170,21 @@ class TwiceFilter:
             else:
                 print('Type Error \'segmentation strategy\'')
 
-        elif type(self.segement) == list:
+        elif type(self.segment) == list:
             total_length = 0
-            for seg in range(len(self.segement)):
-                total_length += (self.segement[seg][1] - self.segement[seg][0])
+            for seg in range(len(self.segment)):
+                total_length += (self.segment[seg][1] - self.segment[seg][0])
 
             choiselg_num = []
-            for seg in range(len(self.segement)):
-                choiselg_num.append(int(bac_num * (self.segement[seg][1] - self.segement[seg][0]) / total_length)) 
-            for seg in range(len(self.segement)):
-                low_index = np.argmin(np.abs(angle - self.segement[seg][0]))
-                up_index = np.argmin(np.abs(angle - self.segement[seg][1]))
-                int_segement = SG_filter_intensity[low_index:up_index]
+            for seg in range(len(self.segment)):
+                choiselg_num.append(int(bac_num * (self.segment[seg][1] - self.segment[seg][0]) / total_length)) 
+            for seg in range(len(self.segment)):
+                low_index = np.argmin(np.abs(angle - self.segment[seg][0]))
+                up_index = np.argmin(np.abs(angle - self.segment[seg][1]))
+                int_segment = SG_filter_intensity[low_index:up_index]
                 num = choiselg_num[seg]
              
-                points = heapq.nsmallest(num, enumerate(int_segement), key=lambda x: x[1])
+                points = heapq.nsmallest(num, enumerate(int_segment), key=lambda x: x[1])
                 for k in range(len(points)):
                     PairIndex.append(points[k][0] + low_index)
 
