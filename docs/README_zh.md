@@ -56,10 +56,6 @@
   </a>
 </p>
 
-<p align="center">
-  <img width="1536" height="1024" alt="WPEM 图像" src="https://github.com/user-attachments/assets/93076f8d-3c28-4b2b-b72c-82e1328d93f9" />
-</p>
-
 > [!NOTE]
 > **WPEM 提出了一种不同于传统 Rietveld 方法的 XRD 精修新范式。**  
 > WPEM 不再通过传统最小二乘峰形匹配来拟合衍射峰，而是将完整衍射谱表示为受物理约束的概率混合分布，并通过期望最大化框架执行全谱分解。通过在优化过程中显式嵌入 Bragg 一致性，PyWPEM 可以在严重峰重叠、混合相、非晶背景和复杂实验条件下实现稳定的分相精修。本工作是将 AI 驱动结构分析与物理可容许衍射精修统一起来的早期尝试之一，有望重新定义下一代自动化 XRD 精修流程。

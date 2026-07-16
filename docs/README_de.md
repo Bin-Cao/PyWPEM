@@ -34,10 +34,6 @@
   <a href="https://github.com/Bin-Cao/PyWPEM/commits/main"><img src="https://img.shields.io/github/last-commit/Bin-Cao/PyWPEM?style=for-the-badge" alt="Last Commit" /></a>
 </p>
 
-<p align="center">
-  <img width="1536" height="1024" alt="WPEM Image" src="https://github.com/user-attachments/assets/93076f8d-3c28-4b2b-b72c-82e1328d93f9" />
-</p>
-
 > [!NOTE]
 > **WPEM führt ein grundlegend neues Paradigma für die XRD-Verfeinerung jenseits konventioneller Rietveld-Methoden ein.**  
 > Anstatt Beugungspeaks über klassisches Least-Squares-Profilmatching anzupassen, formuliert WPEM das gesamte Beugungsmuster als physikalisch eingeschränkte probabilistische Mischverteilung und führt die Whole-Pattern-Dekomposition mit einem Expectation-Maximization-Framework durch. Durch die explizite Einbettung der Bragg-Konsistenz in den Optimierungsprozess ermöglicht PyWPEM eine stabile phasenaufgelöste Verfeinerung bei starker Peak-Überlappung, Mischphasen, amorphen Hintergründen und komplexen experimentellen Bedingungen. Diese Arbeit ist einer der ersten Versuche, KI-gestützte Strukturanalyse mit physikalisch zulässiger Beugungsverfeinerung zu vereinen, und kann die nächste Generation automatisierter XRD-Refinement-Workflows neu definieren.

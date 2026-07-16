@@ -34,10 +34,6 @@
   <a href="https://github.com/Bin-Cao/PyWPEM/commits/main"><img src="https://img.shields.io/github/last-commit/Bin-Cao/PyWPEM?style=for-the-badge" alt="Last Commit" /></a>
 </p>
 
-<p align="center">
-  <img width="1536" height="1024" alt="WPEM Image" src="https://github.com/user-attachments/assets/93076f8d-3c28-4b2b-b72c-82e1328d93f9" />
-</p>
-
 > [!NOTE]
 > **WPEM introduit un nouveau paradigme pour le raffinement XRD au-delà des méthodes Rietveld conventionnelles.**  
 > Au lieu d'ajuster les pics de diffraction par appariement traditionnel de profils aux moindres carrés, WPEM formule l'ensemble du motif de diffraction comme une distribution de mélange probabiliste contrainte par la physique et réalise une décomposition du motif complet au moyen d'un framework d'espérance-maximisation. En intégrant explicitement la cohérence de Bragg dans le processus d'optimisation, PyWPEM permet un raffinement stable par phase en présence de fort chevauchement de pics, de phases mixtes, de fonds amorphes et de conditions expérimentales complexes. Ce travail représente l'une des premières tentatives d'unifier l'analyse structurale pilotée par l'IA avec un raffinement de diffraction physiquement admissible, avec le potentiel de redéfinir les workflows automatisés de raffinement XRD de prochaine génération.

@@ -34,10 +34,6 @@
   <a href="https://github.com/Bin-Cao/PyWPEM/commits/main"><img src="https://img.shields.io/github/last-commit/Bin-Cao/PyWPEM?style=for-the-badge" alt="Last Commit" /></a>
 </p>
 
-<p align="center">
-  <img width="1536" height="1024" alt="WPEM Image" src="https://github.com/user-attachments/assets/93076f8d-3c28-4b2b-b72c-82e1328d93f9" />
-</p>
-
 > [!NOTE]
 > **WPEM은 기존 Rietveld 방법을 넘어서는 XRD 정련의 새로운 패러다임을 제시합니다.**  
 > WPEM은 전통적인 최소제곱 피크 프로파일 매칭으로 회절 피크를 맞추는 대신, 전체 회절 패턴을 물리 제약을 갖는 확률적 혼합 분포로 정식화하고 기대값-최대화 프레임워크를 통해 전체 패턴 분해를 수행합니다. 최적화 과정에 Bragg 일관성을 명시적으로 포함함으로써 PyWPEM은 심한 피크 중첩, 혼합상, 비정질 배경, 복잡한 실험 조건에서도 안정적인 상별 정련을 가능하게 합니다. 이 작업은 AI 기반 구조 분석과 물리적으로 허용 가능한 회절 정련을 통합하려는 초기 시도 중 하나이며, 차세대 자동 XRD 정련 워크플로를 재정의할 잠재력이 있습니다.
