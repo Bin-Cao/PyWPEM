@@ -1,5 +1,8 @@
 <h1 align="center">PyWPEM</h1>
 
+> [!TIP]
+> **访问 PyWPEM 产品主页：**[https://bin-cao.github.io/PyWPEM/](https://bin-cao.github.io/PyWPEM/)
+
 <p align="center">
   <strong>面向复杂晶体结构分析的新一代全谱精修框架。</strong>
 </p>

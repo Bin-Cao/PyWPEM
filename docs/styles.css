@@ -394,3 +394,80 @@ h3 { font-size:1.08rem; margin-bottom:10px; }
   .workflow-list article { grid-template-columns:1fr; gap:10px; }
   .site-footer { padding-bottom:42px; }
 }
+
+/* Product-system manual skin: shared by the Chinese and English manuals. */
+body.manual-book {
+  --manual-ink:#07101f;
+  --manual-panel:#0b1730;
+  --manual-line:rgba(205,224,255,.16);
+  --manual-muted:#a8b8d1;
+  background:var(--manual-ink);
+  color:#f6f9ff;
+}
+.manual-book .manual-topbar { background:rgba(7,16,31,.84); border-color:var(--manual-line); backdrop-filter:blur(18px); }
+.manual-book .brand { color:#f6f9ff; }
+.manual-book .brand img { width:36px; height:36px; border-radius:9px; }
+.manual-book .manual-switch a { border-color:var(--manual-line); background:transparent; color:#b7c6dd; border-radius:999px; }
+.manual-book .manual-switch a.active { background:#76f0dd; border-color:#76f0dd; color:#061725; }
+.manual-book .manual-layout { grid-template-columns:260px minmax(0,1fr); }
+.manual-book .manual-toc { border-color:var(--manual-line); }
+.manual-book .toc-title { color:#76f0dd; }
+.manual-book .manual-toc a { color:#9fb1cc; }
+.manual-book .manual-toc a:hover { color:#76f0dd; }
+.manual-book .manual-content { max-width:900px; }
+.manual-book .manual-content section { border-color:var(--manual-line); }
+.manual-book .manual-content h1,
+.manual-book .manual-content h2 { color:#f6f9ff; }
+.manual-book .manual-content h1 { font-size:clamp(3rem,5vw,4.8rem); letter-spacing:-.055em; line-height:.96; }
+.manual-book .manual-content h2 { font-size:clamp(1.7rem,3vw,2.35rem); letter-spacing:-.035em; }
+.manual-book .manual-content h3 { color:#dfeaff; }
+.manual-book .manual-content p,
+.manual-book .manual-content li,
+.manual-book .manual-content td { color:var(--manual-muted); }
+.manual-book .manual-content code { color:#a9f5e9; }
+.manual-book .manual-content pre,
+.manual-book .manual-code { background:#09172b; border-color:var(--manual-line); color:#dceaff; box-shadow:inset 0 1px 0 rgba(255,255,255,.03); }
+.manual-book .manual-content pre code { color:#dceaff; }
+.manual-book .manual-content th { background:#112442; color:#f6f9ff; border-color:var(--manual-line); }
+.manual-book .manual-content th,
+.manual-book .manual-content td { border-color:var(--manual-line); }
+.manual-book .tutorial-ref { border-color:rgba(118,240,221,.35); background:rgba(118,240,221,.08); color:#b8cee8; border-radius:8px; }
+.manual-book .tutorial-ref a { color:#76f0dd; }
+.manual-book .manual-title { padding:30px 0 48px!important; border-bottom:1px solid var(--manual-line)!important; }
+.manual-book .manual-title .eyebrow { color:#76f0dd; }
+.manual-book .manual-title > p:last-child { max-width:720px; margin-top:20px; font-size:1.05rem; line-height:1.8; }
+.manual-book .manual-title::after { content:"PHYSICS-NATIVE · OPEN SCIENTIFIC SOFTWARE"; display:inline-block; margin-top:24px; color:#76f0dd; font-size:.72rem; letter-spacing:.13em; font-weight:800; }
+.manual-book .manual-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:25px; }
+.manual-book .manual-hero-actions a { padding:10px 14px; border:1px solid var(--manual-line); border-radius:999px; color:#dbe8fc; font-size:.86rem; font-weight:750; }
+.manual-book .manual-hero-actions a:first-child { background:#76f0dd; border-color:#76f0dd; color:#061725; }
+.manual-book .manual-hero-actions a:hover { border-color:#76f0dd; transform:translateY(-1px); }
+@media (max-width:980px) {
+  .manual-book .manual-layout { grid-template-columns:1fr; }
+  .manual-book .manual-toc { border-color:var(--manual-line); }
+}
+
+/* Bright companion theme for the product launch site and manuals. */
+body.manual-book { --manual-ink:#f7fbff; --manual-panel:#ffffff; --manual-line:#d9e7f2; --manual-muted:#576e85; background:var(--manual-ink); color:#142b45; }
+.manual-book .manual-topbar { background:rgba(255,255,255,.88); border-color:var(--manual-line); }
+.manual-book .brand { color:#142b45; }
+.manual-book .manual-switch a { border-color:#d3e2ef; background:#f5faff; color:#58718b; }
+.manual-book .manual-switch a.active { background:#1680d9; border-color:#1680d9; color:#fff; }
+.manual-book .manual-toc { border-color:var(--manual-line); }
+.manual-book .toc-title { color:#1680d9; }
+.manual-book .manual-toc a { color:#58718b; }
+.manual-book .manual-toc a:hover { color:#1680d9; }
+.manual-book .manual-content section { border-color:var(--manual-line); }
+.manual-book .manual-content h1,.manual-book .manual-content h2,.manual-book .manual-content h3 { color:#142b45; }
+.manual-book .manual-content p,.manual-book .manual-content li,.manual-book .manual-content td { color:var(--manual-muted); }
+.manual-book .manual-content code { color:#087d70; }
+.manual-book .manual-content pre,.manual-book .manual-code { background:#f1f8fd; border-color:#d8e7f2; color:#173652; box-shadow:none; }
+.manual-book .manual-content pre code { color:#173652; }
+.manual-book .manual-content th { background:#e9f5fd; color:#173652; border-color:var(--manual-line); }
+.manual-book .manual-content th,.manual-book .manual-content td { border-color:var(--manual-line); }
+.manual-book .tutorial-ref { border-color:#bfe4dc; background:#effcf8; color:#507186; }
+.manual-book .tutorial-ref a,.manual-book .manual-title .eyebrow { color:#087d70; }
+.manual-book .manual-title { border-color:var(--manual-line)!important; }
+.manual-book .manual-title::after { color:#1680d9; }
+.manual-book .manual-hero-actions a { border-color:#d0e2ef; color:#29516f; background:#fff; }
+.manual-book .manual-hero-actions a:first-child { background:#1680d9; border-color:#1680d9; color:#fff; }
+.manual-book .manual-hero-actions a:hover { border-color:#1680d9; }

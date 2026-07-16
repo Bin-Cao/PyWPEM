@@ -1,5 +1,8 @@
 <h1 align="center">PyWPEM</h1>
 
+> [!TIP]
+> **Explore the PyWPEM product homepage:** [https://bin-cao.github.io/PyWPEM/](https://bin-cao.github.io/PyWPEM/)
+
 <p align="center">
   <strong>A next-generation whole-pattern refinement framework for complex crystal structure analysis.</strong>
 </p>
@@ -53,9 +56,7 @@
   </a>
 </p>
 
-<p align="center">
-  <img width="1536" height="1024" alt="WPEM Image" src="https://github.com/user-attachments/assets/93076f8d-3c28-4b2b-b72c-82e1328d93f9" />
-</p>
+
 
 > [!NOTE]
 > **WPEM introduces a fundamentally new paradigm for XRD refinement beyond conventional Rietveld methods.**  

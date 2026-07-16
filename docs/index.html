@@ -3,158 +3,111 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PyWPEM | AI-Driven Structure Refinement of X-ray Diffraction</title>
-  <meta name="description" content="PyWPEM presents WPEM, a physics-constrained framework for AI-driven structure refinement of X-ray diffraction with Bragg-consistent whole-pattern decomposition.">
-  <link rel="stylesheet" href="styles.css">
+  <title>PyWPEM — The new standard for X-ray diffraction refinement</title>
+  <meta name="description" content="PyWPEM is a physics-native platform for whole-pattern X-ray diffraction analysis and AI-assisted crystal structure refinement.">
+  <style>
+    :root { --ink:#f7fbff; --surface:#ffffff; --line:#dce8f4; --muted:#5b6f84; --white:#14263c; --blue:#267bda; --aqua:#17a98c; --gold:#efb442; }
+    * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; background:var(--ink); color:var(--white); font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; } a { color:inherit; text-decoration:none; } img { display:block; max-width:100%; } @media (prefers-reduced-motion:no-preference) { .hero .eyebrow,.hero h1,.hero-text,.hero .actions,.trust { animation:rise .8s both; } .hero h1 { animation-delay:.08s; } .hero-text { animation-delay:.16s; } .hero .actions { animation-delay:.24s; } .trust { animation-delay:.32s; } .visual { animation:float-in 1.1s .16s both; } .brand-mark { animation:pulse 3s ease-in-out infinite; } .capability,.proof-card,.flow-step { transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease; } .capability:hover,.proof-card:hover,.flow-step:hover { transform:translateY(-7px); border-color:rgba(118,240,221,.52); box-shadow:0 20px 42px rgba(0,0,0,.2); } .button { transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease; } .button-primary:hover { box-shadow:0 14px 38px rgba(118,240,221,.32); } } @keyframes rise { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:none; } } @keyframes float-in { from { opacity:0; transform:translateY(35px) rotate(2deg); } to { opacity:1; transform:none; } } @keyframes pulse { 50% { box-shadow:0 0 34px rgba(92,168,255,.85); } }
+    .wrap { width:min(1180px, calc(100% - 48px)); margin:auto; } .eyebrow { margin:0 0 18px; color:var(--aqua); font-size:.73rem; font-weight:800; letter-spacing:.17em; text-transform:uppercase; } .section { padding:112px 0; } h1,h2,h3,p { margin:0; } h1,h2 { font-family:ui-serif, Georgia, Cambria, "Times New Roman", serif; }
+    .topbar { position:sticky; top:0; z-index:10; background:rgba(255,255,255,.84); backdrop-filter:blur(18px); border-bottom:1px solid var(--line); } .nav { min-height:74px; display:flex; align-items:center; justify-content:space-between; gap:20px; } .brand { display:flex; align-items:center; gap:10px; font-size:1.04rem; font-weight:800; letter-spacing:.025em; } .brand-mark { width:29px; height:29px; border-radius:9px; background:linear-gradient(135deg,var(--aqua),var(--blue)); box-shadow:0 0 20px rgba(38,123,218,.25); position:relative; } .brand-mark:after { content:""; position:absolute; inset:7px; border:1px solid #fff; border-radius:3px; } .nav-links { display:flex; align-items:center; gap:20px; color:#536a82; font-size:.9rem; } .nav-links a:hover { color:var(--blue); } .mini-cta { padding:9px 14px; border:1px solid #b8d9f5; border-radius:999px; color:var(--blue); font-weight:700; }
+    .hero { position:relative; isolation:isolate; overflow:hidden; min-height:780px; padding:110px 0 75px; background:radial-gradient(circle at 76% 23%,rgba(102,183,255,.35),transparent 27%),radial-gradient(circle at 40% 75%,rgba(102,232,205,.22),transparent 30%),var(--ink); } .hero:before { content:""; position:absolute; z-index:-1; inset:0; opacity:.7; background-image:linear-gradient(rgba(81,145,211,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(81,145,211,.09) 1px,transparent 1px); background-size:48px 48px; mask-image:linear-gradient(to bottom,black,transparent 82%); }
+    .hero-grid { display:grid; grid-template-columns:.93fr 1.07fr; align-items:center; gap:55px; } .hero h1 { max-width:680px; font-size:clamp(3.25rem,6vw,6.25rem); letter-spacing:-.065em; line-height:.92; } .hero h1 em { color:var(--aqua); font-style:normal; } .hero-text { margin-top:26px; max-width:555px; color:var(--muted); font-size:1.12rem; line-height:1.75; } .actions { display:flex; gap:13px; flex-wrap:wrap; margin-top:34px; } .button { display:inline-flex; align-items:center; justify-content:center; padding:13px 20px; border:1px solid var(--line); border-radius:999px; font-size:.92rem; font-weight:750; transition:.2s ease; } .button:hover { transform:translateY(-2px); border-color:#95c6ff; } .button-primary { color:#061725; border-color:var(--aqua); background:var(--aqua); box-shadow:0 10px 32px rgba(118,240,221,.19); } .trust { display:flex; gap:23px; margin-top:45px; color:#9dafca; font-size:.78rem; } .trust span { display:flex; align-items:center; gap:8px; } .trust i { width:6px; height:6px; border-radius:50%; background:var(--aqua); box-shadow:0 0 10px var(--aqua); }
+    .visual { position:relative; } .visual:before { content:""; position:absolute; width:74%; height:65%; right:4%; top:12%; border-radius:50%; filter:blur(60px); background:rgba(53,115,255,.3); z-index:-1; } .product-window { position:relative; overflow:hidden; border:1px solid rgba(189,216,255,.28); border-radius:16px; background:#dce5ee; padding:0 0 12px; box-shadow:0 30px 80px rgba(0,0,0,.38); transform:perspective(1400px) rotateY(-4deg) rotateX(2deg); } .window-bar { height:37px; background:#14233d; display:flex; align-items:center; gap:6px; padding:0 14px; } .window-bar b { width:7px; height:7px; border-radius:50%; background:#62718a; } .window-label { margin-left:8px; color:#c4d2e8; font-size:.68rem; letter-spacing:.08em; } .product-window img { width:100%; max-height:420px; object-fit:cover; object-position:left top; } .metric { position:absolute; z-index:2; border:1px solid rgba(118,240,221,.4); border-radius:12px; background:rgba(11,23,48,.9); backdrop-filter:blur(10px); padding:14px 17px; box-shadow:0 15px 34px rgba(0,0,0,.25); } .metric-top { top:-23px; right:-20px; } .metric-bottom { left:-26px; bottom:24px; } .metric strong { display:block; color:var(--aqua); font-size:1.2rem; letter-spacing:-.03em; } .metric small { display:block; margin-top:3px; color:#b4c5df; font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; }
+    .ticker { border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:#0a162b; } .ticker-inner { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:11px 24px; padding:18px 0; color:#8fa5c5; font-size:.78rem; letter-spacing:.12em; text-align:center; text-transform:uppercase; } .ticker strong { color:var(--aqua); }
+    .intro { background:#f4f7fb; color:#0b1b30; } .intro-grid { display:grid; grid-template-columns:.9fr 1.1fr; gap:70px; align-items:end; } .intro h2,.section-title h2 { font-size:clamp(2.35rem,4.2vw,4.25rem); line-height:.98; letter-spacing:-.055em; } .intro h2 em { color:#1c75ca; font-style:normal; } .intro-copy { color:#53647a; font-size:1.08rem; line-height:1.8; padding-bottom:5px; } .intro-copy p + p { margin-top:18px; } .intro .eyebrow { color:#1774c5; }
+    .dark { background:var(--ink); } .section-title { max-width:690px; } .section-title h2 { margin-top:0; } .section-sub { max-width:540px; margin-top:22px; color:var(--muted); line-height:1.75; } .capabilities { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:50px; } .capability { min-height:250px; padding:26px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(150deg,rgba(23,46,85,.76),rgba(11,23,48,.86)); } .capability:nth-child(2) { background:linear-gradient(150deg,rgba(18,70,94,.72),rgba(11,23,48,.86)); } .number { color:var(--aqua); font-weight:800; font-size:.75rem; letter-spacing:.12em; } .capability h3 { margin-top:44px; font-size:1.25rem; letter-spacing:-.03em; } .capability p { margin-top:12px; color:#aabbd5; line-height:1.7; font-size:.95rem; }
+    .workflow { background:#0b1730; border-top:1px solid var(--line); border-bottom:1px solid var(--line); } .flow { display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:52px; border:1px solid var(--line); border-radius:14px; overflow:hidden; } .flow-step { min-height:220px; padding:26px 24px; position:relative; background:rgba(8,19,38,.52); } .flow-step + .flow-step { border-left:1px solid var(--line); } .flow-step:after { content:"→"; position:absolute; top:22px; right:-10px; z-index:1; color:var(--aqua); font-size:1.25rem; } .flow-step:last-child:after { display:none; } .flow-step b { color:var(--blue); font-size:.75rem; letter-spacing:.1em; } .flow-step h3 { margin-top:52px; font-size:1.14rem; } .flow-step p { margin-top:10px; color:#aabbd5; font-size:.9rem; line-height:1.65; }
+    .proof { background:#f4f7fb; color:#09182d; } .proof-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:50px; } .proof-card { min-height:220px; padding:28px; background:#fff; border:1px solid #dce4ed; border-radius:14px; box-shadow:0 15px 30px rgba(19,43,75,.06); } .proof-card.wide { grid-column:span 2; display:grid; grid-template-columns:.7fr 1.3fr; gap:30px; align-items:center; background:linear-gradient(105deg,#0c1b31,#142f5c); color:white; border:0; } .proof-card .eyebrow { color:#1774c5; } .proof-card.wide .eyebrow { color:var(--aqua); } .proof-card h3 { margin-top:6px; font-size:1.4rem; letter-spacing:-.035em; } .proof-card p { margin-top:13px; color:#586a80; line-height:1.72; } .proof-card.wide p { color:#b8cae4; } .proof-data { display:flex; gap:30px; flex-wrap:wrap; } .proof-data strong { display:block; color:var(--aqua); font-size:2.1rem; letter-spacing:-.06em; } .proof-data span { color:#c1d1e7; font-size:.76rem; }
+    .resources { background:#081426; } .resource-layout { display:grid; grid-template-columns:.76fr 1.24fr; gap:54px; align-items:start; } .author-card { position:relative; overflow:hidden; padding:30px; border:1px solid rgba(118,240,221,.38); border-radius:16px; background:linear-gradient(145deg,#153968,#0b1931); } .author-card:after { content:"BC"; position:absolute; right:-10px; bottom:-43px; color:rgba(118,240,221,.09); font:900 10rem/1 ui-serif,Georgia,serif; letter-spacing:-.12em; } .author-card h3 { position:relative; margin-top:8px; font-size:2rem; letter-spacing:-.06em; } .author-card p { position:relative; margin-top:14px; color:#c0d0e8; line-height:1.7; } .author-card a { position:relative; display:inline-block; margin-top:23px; color:var(--aqua); font-weight:800; } .resource-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; } .resource-link { min-height:138px; display:flex; flex-direction:column; justify-content:space-between; padding:19px; border:1px solid var(--line); border-radius:12px; background:rgba(16,37,68,.55); transition:.23s ease; } .resource-link:hover { transform:translateY(-4px); border-color:var(--aqua); background:#10294a; } .resource-link span { color:var(--aqua); font-size:.72rem; font-weight:800; letter-spacing:.1em; } .resource-link strong { font-size:1rem; } .launch { position:relative; overflow:hidden; padding:118px 0; background:radial-gradient(circle at 50% 80%,rgba(31,132,180,.4),transparent 38%),#081426; text-align:center; } .launch:before { content:""; position:absolute; inset:0; background:linear-gradient(90deg,transparent 49.9%,rgba(149,199,255,.11) 50%,transparent 50.1%),linear-gradient(transparent 49.9%,rgba(149,199,255,.11) 50%,transparent 50.1%); background-size:42px 42px; mask-image:radial-gradient(ellipse at center,black,transparent 68%); } .launch .wrap { position:relative; } .launch h2 { max-width:850px; margin:auto; font-size:clamp(2.8rem,5.4vw,5.2rem); line-height:.96; letter-spacing:-.065em; } .launch p:not(.eyebrow) { max-width:570px; margin:23px auto 0; color:#adbed8; line-height:1.75; } .launch .actions { justify-content:center; } .footer { padding:29px 0; background:#06101f; color:#8498b6; font-size:.82rem; } .footer .wrap { display:flex; justify-content:space-between; gap:20px; } .footer a:hover { color:var(--aqua); }
+    .language-switch { display:flex; gap:3px; padding:3px; border:1px solid #d9e7f4; border-radius:999px; background:#f2f8fe; } .language-switch button { border:0; border-radius:999px; padding:5px 7px; background:transparent; color:#62758a; cursor:pointer; font:800 .68rem/1 Inter,ui-sans-serif,system-ui,sans-serif; } .language-switch button.active { background:#fff; color:#1674c9; box-shadow:0 2px 7px rgba(35,99,163,.14); }
+    body { background:#f7fbff; color:#14263c; } .hero h1 { color:#10243d; } .hero-text { color:#526b84; } .button { background:rgba(255,255,255,.72); border-color:#cedfed; color:#193450; } .button-primary { background:#167cda; border-color:#167cda; color:#fff; } .trust { color:#5c7188; } .trust i { background:#17a98c; } .product-window { border-color:#bdd5e9; box-shadow:0 30px 75px rgba(37,83,129,.2); } .window-bar { background:#e7f0fa; } .window-bar b { background:#89a5c0; } .window-label { color:#486580; } .metric { background:rgba(255,255,255,.91); border-color:#9edccd; box-shadow:0 15px 34px rgba(45,91,136,.16); } .metric strong { color:#07866f; } .metric small { color:#56708a; } .ticker { background:#eff8ff; border-color:#d7e7f4; } .ticker-inner { color:#54718a; } .ticker strong { color:#07866f; } .dark { background:#fff; } .section-sub { color:#5b6f84; } .capability { border-color:#d9e6f1; background:linear-gradient(150deg,#f5fbff,#fff); box-shadow:0 10px 24px rgba(35,85,130,.06); } .capability:nth-child(2) { background:linear-gradient(150deg,#edfffb,#fff); } .capability h3 { color:#183651; } .capability p { color:#5a7087; } .workflow { background:#edf7ff; border-color:#d8e7f3; } .flow { border-color:#d5e4f0; } .flow-step { background:rgba(255,255,255,.74); } .flow-step + .flow-step { border-color:#d5e4f0; } .flow-step p { color:#5c728a; } .proof { background:#f7fbff; } .proof-card { border-color:#dbe7f1; box-shadow:0 15px 30px rgba(19,71,119,.07); } .proof-card.wide { background:linear-gradient(112deg,#075a9d,#087e94); } .proof-card.wide h3 { color:#fff; } .proof-card.wide .eyebrow { color:#d2fff7; font-weight:900; } .proof-card.wide p { color:#f3fbff; font-weight:550; } .proof-card.wide .proof-data strong { color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.18); } .proof-card.wide .proof-data span { color:#e7f8ff; font-weight:700; } .resources { background:#eef8ff; } .author-card { background:linear-gradient(145deg,#e1f4ff,#effffb); border-color:#a6d9e4; } .author-card p { color:#52718d; } .author-card:after { color:rgba(23,124,218,.09); } .resource-link { border-color:#d7e6f2; background:rgba(255,255,255,.82); color:#183650; } .resource-link:hover { background:#fff; border-color:#6bb6dc; } .launch { background:radial-gradient(circle at 50% 80%,rgba(113,213,198,.32),transparent 38%),#eaf7ff; } .launch:before { background:linear-gradient(90deg,transparent 49.9%,rgba(45,137,204,.1) 50%,transparent 50.1%),linear-gradient(transparent 49.9%,rgba(45,137,204,.1) 50%,transparent 50.1%); } .launch h2 { color:#122e4a; } .launch p:not(.eyebrow) { color:#59728c; } .footer { background:#fff; color:#6e8094; border-top:1px solid #dce8f3; }
+    @media (max-width:900px) { .hero { min-height:auto; } .hero-grid,.intro-grid,.resource-layout { grid-template-columns:1fr; } .hero-grid { gap:60px; } .visual { max-width:690px; margin:auto; } .capabilities { grid-template-columns:1fr; } .flow { grid-template-columns:1fr 1fr; } .flow-step:nth-child(3) { border-left:0; border-top:1px solid var(--line); } .flow-step:nth-child(4) { border-top:1px solid var(--line); } .proof-grid { grid-template-columns:1fr; } .proof-card.wide { grid-column:auto; } .nav-links { gap:15px; } }
+    @media (max-width:620px) { .wrap { width:min(100% - 32px,1180px); } .nav { min-height:65px; } .nav-links a:not(.mini-cta) { display:none; } .hero { padding:78px 0 58px; } .hero h1 { font-size:3.35rem; } .trust { gap:12px; flex-wrap:wrap; } .metric { transform:scale(.82); transform-origin:center; } .metric-top { right:-35px; } .metric-bottom { left:-35px; } .section { padding:76px 0; } .flow { grid-template-columns:1fr; } .flow-step + .flow-step,.flow-step:nth-child(3) { border-left:0; border-top:1px solid var(--line); } .flow-step:after { content:"↓"; left:23px; right:auto; top:auto; bottom:-14px; } .proof-card.wide { display:block; } .proof-data { margin-top:25px; } .resource-grid { grid-template-columns:1fr 1fr; } .footer .wrap { display:block; } .footer p + p { margin-top:10px; } }
+  </style>
 </head>
 <body>
-  <header class="site-header">
-    <nav class="nav shell">
-      <a class="brand" href="#top"><img src="figs/Logo.jpg" alt="PyWPEM"><span>PyWPEM</span></a>
-      <div class="nav-links">
-        <a href="#abstract">Abstract</a>
-        <a href="#highlights">Highlights</a>
-        <a href="manual_zh.html">Manual</a>
-        <a href="#applications">Applications</a>
-        <a href="#figures">Figures</a>
-        <a href="#citation">Citation</a>
-      </div>
+  <header class="topbar">
+    <nav class="nav wrap" aria-label="Main navigation">
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span>PyWPEM</a>
+      <div class="nav-links"><a href="#platform" data-i18n="navPlatform">Platform</a><a href="#workflow" data-i18n="navWorkflow">Workflow</a><a href="#results" data-i18n="navValidation">Validation</a><a href="#resources" data-i18n="navResources">Resources</a><a href="manual_zh.html" data-i18n="navManual">Manual</a><div class="language-switch" aria-label="Language selector"><button type="button" data-lang="en" class="active">EN</button><button type="button" data-lang="zh">中</button><button type="button" data-lang="ja">日</button><button type="button" data-lang="ko">한</button></div><a class="mini-cta" href="https://github.com/Bin-Cao/PyWPEM" target="_blank" rel="noreferrer" data-i18n="navGithub">View on GitHub ↗</a></div>
     </nav>
   </header>
 
   <main id="top">
-    <section class="hero shell">
-      <div class="hero-copy centered-copy">
-        <p class="eyebrow">PyWPEM · Paper page</p>
-        <h1>AI-Driven Structure Refinement of X-ray Diffraction</h1>
-        <p class="hero-subtitle">A physics-constrained bridge between AI-generated crystal hypotheses and crystallographic validation.</p>
-        <p class="authors"><span class="author-emphasis">Bin Cao<sup>1</sup></span>, Qian Zhang<sup>2</sup>, Zhenjie Feng<sup>2</sup>, Taolue Zhang<sup>1</sup>, Jiaqiang Huang<sup>1</sup>, Lu-Tao Weng<sup>1</sup>, Tong-Yi Zhang<sup>1</sup></p>
-        <p class="author-focus">Project lead and contact: <strong>Cao Bin</strong></p>
-        <p class="affiliations"><sup>1</sup> HKUST (Guangzhou) · <sup>2</sup> Shanghai University</p>
-        <div class="hero-actions">
-          <a class="button primary" href="manual_zh.html">说明书 / Manual</a>
-          <a class="button" href="https://arxiv.org/abs/2602.16372" target="_blank" rel="noreferrer">Read Paper</a>
-          <a class="button" href="https://github.com/Bin-Cao/PyWPEM" target="_blank" rel="noreferrer">GitHub</a>
-          <a class="button" href="https://pyxplore.netlify.app/" target="_blank" rel="noreferrer">Documentation</a>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow" data-i18n="heroEyebrow">Physics-native XRD intelligence</p>
+          <h1 data-i18n-html="heroTitle">Make every<br>diffraction pattern <em>actionable.</em></h1>
+          <p class="hero-text" data-i18n="heroText">PyWPEM is the whole-pattern refinement platform that turns overlapping X-ray diffraction signals into clear, physically admissible insight—ready for the next decision.</p>
+          <div class="actions"><a class="button button-primary" href="manual_zh.html" data-i18n="start">Start exploring</a><a class="button" href="https://arxiv.org/abs/2602.16372" target="_blank" rel="noreferrer" data-i18n="paper">Read the research ↗</a></div>
+          <div class="trust"><span><i></i> Bragg-consistent by design</span><span><i></i> AI-ready workflow</span><span><i></i> Open scientific software</span></div>
         </div>
-        <p class="hero-note">Whole-pattern expectation-maximization (WPEM) embeds Bragg-law constraints into probabilistic whole-pattern decomposition for stable, refinement-ready XRD analysis.</p>
-      </div>
-      <div class="hero-media figure-frame">
-        <img src="figs/Fig1.png" alt="Figure 1 from the PyWPEM paper showing the AI-to-refinement workflow">
-      </div>
-    </section>
-
-    <section id="abstract" class="section shell narrow">
-      <div class="section-heading centered">
-        <p class="eyebrow">Abstract</p>
-        <h2>Physics-constrained refinement for modern AI-enabled crystallography</h2>
-      </div>
-      <div class="prose statement-block">
-        <p>Artificial intelligence can generate plausible crystal hypotheses from X-ray diffraction, but these hypotheses often fail during refinement when intensities become non-identifiable under strong peak overlap. WPEM addresses this bottleneck by embedding Bragg consistency directly into batch expectation-maximization, producing a continuous, component-resolved intensity representation that is physically admissible, numerically stable, and refinement-ready.</p>
-        <p>Across reference benchmarks and challenging real-world regimes—including multiphase mixtures, semicrystalline polymers, operando tracking, disordered solids, and synchrotron archaeological samples—PyWPEM delivers robust whole-pattern decomposition while preserving crystallographic rigor.</p>
-      </div>
-    </section>
-
-    <section id="highlights" class="section shell">
-      <div class="section-heading">
-        <p class="eyebrow">Highlights</p>
-        <h2>Core contributions</h2>
-      </div>
-      <div class="simple-grid">
-        <article>
-          <h3>Physics-constrained refinement</h3>
-          <p>WPEM converts AI-generated structure proposals into Bragg-admissible, refinement-ready inputs.</p>
-        </article>
-        <article>
-          <h3>Stable in severe overlap</h3>
-          <p>Responsibility-weighted EM offers a soft, overlap-aware decomposition where conventional profile fitting may become fragile.</p>
-        </article>
-        <article>
-          <h3>Quantitative interpretation</h3>
-          <p>The method supports phase fractions, lattice tracking, and component-resolved analysis across complex XRD regimes.</p>
-        </article>
-      </div>
-    </section>
-
-    <section id="applications" class="section shell">
-      <div class="section-heading">
-        <p class="eyebrow">Applications</p>
-        <h2>Validated across representative scientific cases</h2>
-      </div>
-      <div class="applications-list">
-        <div><strong>Benchmarks.</strong> Lower profile factors than FullProf and TOPAS on PbSO<sub>4</sub> and Tb<sub>2</sub>BaCoO<sub>5</sub> under matched settings.</div>
-        <div><strong>Operando XRD.</strong> Robust time-series refinement for lattice evolution tracking during electrochemical cycling.</div>
-        <div><strong>Disordered solids.</strong> Automated screening of candidate occupations in complex Ru–Mn oxide systems.</div>
-        <div><strong>Archaeological samples.</strong> Phase-resolved decomposition of a heavily overlapped ancient Egyptian make-up pattern.</div>
-        <div><strong>Semicrystalline polymers.</strong> Unified separation of crystalline peaks and amorphous halos for crystallinity analysis.</div>
-        <div><strong>Reproducible workflows.</strong> Open code, cases, and documentation for research and deployment.</div>
-      </div>
-    </section>
-
-    <section id="figures" class="section shell">
-      <div class="section-heading">
-        <p class="eyebrow">Figures from main.pdf</p>
-        <h2>Key results from the paper</h2>
-      </div>
-      <div class="gallery minimal-gallery">
-        <figure class="gallery-item wide"><a href="figs/Fig2.png" target="_blank" rel="noreferrer"><img src="figs/Fig2.png" alt="Benchmarking and quantitative decomposition figure"></a><figcaption><strong>Figure 2.</strong> Benchmarking and quantitative decomposition across reference datasets, multiphase Ti–15Nb analysis, and NaCl–Li₂CO₃ composition recovery.</figcaption></figure>
-        <figure class="gallery-item"><a href="figs/Fig3.png" target="_blank" rel="noreferrer"><img src="figs/Fig3.png" alt="Operando tracking and solid-solution refinement figure"></a><figcaption><strong>Figure 3.</strong> High-throughput PXRD workflows enabled by WPEM, including operando lattice tracking and automated solid-solution refinement.</figcaption></figure>
-        <figure class="gallery-item"><a href="figs/Fig4.png" target="_blank" rel="noreferrer"><img src="figs/Fig4.png" alt="Ancient Egyptian make-up decomposition figure"></a><figcaption><strong>Figure 4.</strong> Phase-resolved decomposition of a complex synchrotron sample from ancient Egyptian make-up.</figcaption></figure>
-        <figure class="gallery-item"><a href="figs/Fig5.png" target="_blank" rel="noreferrer"><img src="figs/Fig5.png" alt="Semicrystalline diffraction quantitative analysis figure"></a><figcaption><strong>Figure 5.</strong> Separation of crystalline peaks and amorphous halos for semicrystalline diffraction analysis.</figcaption></figure>
-      </div>
-    </section>
-
-    <section class="section shell two-column">
-      <div>
-        <p class="eyebrow">Codebase</p>
-        <h2 class="compact-title">A modular scientific toolkit</h2>
-        <p class="muted">PyWPEM includes modules for simulation, Bragg optimization, refinement, graph construction, amorphous analysis, and XAS/XPS extensions. The implementation is designed for reproducible research workflows rather than visual complexity.</p>
-      </div>
-      <div class="module-list">
-        <span>XRDSimulation</span>
-        <span>EMBraggOpt</span>
-        <span>Refinement</span>
-        <span>StructureOpt</span>
-        <span>GraphStructure</span>
-        <span>Extinction</span>
-        <span>Amorphous</span>
-        <span>WPEMXAS / WPEMXPS</span>
-      </div>
-    </section>
-
-    <section id="citation" class="section shell citation-grid">
-      <div>
-        <div class="section-heading left">
-          <p class="eyebrow">Citation</p>
-          <h2>If this work contributes to your research, please cite the paper</h2>
-        </div>
-        <div class="code-block">
-<pre>@article{cao2026wpem,
-  title   = {AI-Driven Structure Refinement of X-ray Diffraction},
-  author  = {Bin Cao and Qian Zhang and Zhenjie Feng and Taolue Zhang and Jiaqiang Huang and Lu-Tao Weng and Tong-Yi Zhang},
-  journal = {arXiv preprint},
-  year    = {2026}
-}</pre>
+        <div class="visual" aria-label="PyWPEM whole-pattern decomposition preview">
+          <div class="metric metric-top"><strong>Whole-pattern</strong><small>not peak-by-peak</small></div>
+          <div class="product-window"><div class="window-bar"><b></b><b></b><b></b><span class="window-label">PYWPEM / ANALYSIS WORKSPACE</span></div><img src="figs/Fig1.png" alt="PyWPEM workflow for X-ray diffraction analysis"></div>
+          <div class="metric metric-bottom"><strong>Physics + AI</strong><small>one refinement loop</small></div>
         </div>
       </div>
-      <aside class="contact-card">
-        <p class="eyebrow">Resources</p>
-        <h3>Project links</h3>
-        <p>Open-source code, reproducible cases, and documentation for scientific use and GitHub Pages deployment.</p>
-        <div class="resource-links">
-          <a href="https://arxiv.org/abs/2602.16372" target="_blank" rel="noreferrer">Paper PDF</a>
-          <a href="manual_zh.html">说明书 / Manual</a>
-          <a href="https://github.com/Bin-Cao/PyWPEM/tree/main/CASES" target="_blank" rel="noreferrer">Datasets / Cases</a>
-          <a href="mailto:bcao686@connect.hkust-gz.edu.cn">Contact author</a>
-          <a href="https://bin-cao.github.io/" target="_blank" rel="noreferrer">Bin Cao's homepage</a>
-        </div>
-      </aside>
     </section>
+    <div class="ticker"><div class="ticker-inner wrap"><span><strong>WPEM</strong> Whole-pattern expectation maximization</span><span>•</span><span>XRD simulation</span><span>•</span><span>Quantitative analysis</span><span>•</span><span>Structure refinement</span><span>•</span><span>Amorphous phases</span></div></div>
+
+    <section class="intro section">
+      <div class="wrap intro-grid"><div><p class="eyebrow" data-i18n="introEyebrow">A new refinement paradigm</p><h2 data-i18n-html="introTitle">Complex patterns.<br><em>Decisive answers.</em></h2></div><div class="intro-copy"><p data-i18n="introText1">Conventional fitting struggles when peaks overlap, phases mix, and intensities become non-identifiable. PyWPEM replaces fragile profile matching with a physics-constrained probabilistic view of the entire pattern.</p><p data-i18n="introText2">The result is a stable, continuous, component-resolved intensity representation that preserves crystallographic rigor while meeting the speed and scale of AI-enabled materials research.</p></div></div>
+    </section>
+
+    <section id="platform" class="dark section"><div class="wrap"><div class="section-title"><p class="eyebrow" data-i18n="platformEyebrow">One platform. Clearer materials intelligence.</p><h2 data-i18n="platformTitle">Built for the conditions where analysis matters most.</h2><p class="section-sub" data-i18n="platformText">A modular scientific toolkit for moving from raw diffraction data to trustworthy structural decisions.</p></div><div class="capabilities"><article class="capability"><span class="number">01 / DECOMPOSE</span><h3>Resolve the overlap</h3><p>Soft, responsibility-weighted decomposition separates contributions across severe peak overlap and mixed phases.</p></article><article class="capability"><span class="number">02 / CONSTRAIN</span><h3>Stay physically grounded</h3><p>Bragg-law consistency is embedded in the optimization itself—not added after the fact.</p></article><article class="capability"><span class="number">03 / REFINE</span><h3>Move with confidence</h3><p>Deliver refinement-ready outputs for phase fractions, lattice evolution, structure screening, and more.</p></article></div></div></section>
+
+    <section id="workflow" class="workflow section"><div class="wrap"><div class="section-title"><p class="eyebrow">From signal to structure</p><h2>A connected workflow for modern diffraction science.</h2></div><div class="flow"><article class="flow-step"><b>01 / INPUT</b><h3>Bring your pattern</h3><p>Start with experimental XRD data, candidate phases, and the context of your material system.</p></article><article class="flow-step"><b>02 / MODEL</b><h3>Map the physics</h3><p>Build a whole-pattern probabilistic mixture under Bragg-consistent constraints.</p></article><article class="flow-step"><b>03 / OPTIMIZE</b><h3>Separate with WPEM</h3><p>Use batch expectation-maximization to resolve overlapping component intensities.</p></article><article class="flow-step"><b>04 / DECIDE</b><h3>Refine and learn</h3><p>Export stable inputs for quantitative refinement, AI hypothesis testing, and reporting.</p></article></div></div></section>
+
+    <section id="results" class="proof section"><div class="wrap"><div class="section-title"><p class="eyebrow">Validated in the real world</p><h2>One method. Many difficult materials problems.</h2></div><div class="proof-grid"><article class="proof-card"><p class="eyebrow">Operando XRD</p><h3>See change while it happens.</h3><p>Track lattice evolution through electrochemical cycling with a stable time-series refinement workflow.</p></article><article class="proof-card"><p class="eyebrow">Disordered solids</p><h3>Screen the structure space.</h3><p>Evaluate candidate occupations and extract signal from complex material systems with less ambiguity.</p></article><article class="proof-card wide"><div><p class="eyebrow">Across the full spectrum</p><h3>From reference standards to archaeological samples.</h3></div><div><p>PyWPEM has been validated across multiphase mixtures, semicrystalline polymers, operando experiments, disordered oxides, and heavily overlapped synchrotron data.</p><div class="proof-data"><div><strong>6+</strong><span>scientific application regimes</span></div><div><strong>Open</strong><span>code, cases &amp; workflows</span></div><div><strong>AI</strong><span>ready by architecture</span></div></div></div></article></div></div></section>
+
+    <section id="resources" class="resources section"><div class="wrap"><div class="resource-layout"><aside class="author-card"><p class="eyebrow">Project lead &amp; author</p><h3>Bin Cao</h3><p>Leading the development of PyWPEM at the intersection of crystallography, physical modeling, and AI for Science.</p><a href="https://bin-cao.github.io/" target="_blank" rel="noreferrer">Visit Bin Cao’s homepage ↗</a></aside><div><div class="section-title"><p class="eyebrow">Explore the ecosystem</p><h2>Everything you need to go further.</h2></div><div class="resource-grid"><a class="resource-link" href="manual_zh.html"><span>GUIDE</span><strong>Chinese Manual →</strong></a><a class="resource-link" href="manual_en.html"><span>GUIDE</span><strong>English Manual →</strong></a><a class="resource-link" href="https://github.com/Bin-Cao/PyWPEM" target="_blank" rel="noreferrer"><span>CODE</span><strong>GitHub Repository ↗</strong></a><a class="resource-link" href="https://pyxplore.netlify.app/" target="_blank" rel="noreferrer"><span>DOCS</span><strong>PyXplore Docs ↗</strong></a><a class="resource-link" href="https://arxiv.org/abs/2602.16372" target="_blank" rel="noreferrer"><span>RESEARCH</span><strong>Read the Paper ↗</strong></a><a class="resource-link" href="https://github.com/Bin-Cao/PyWPEM/tree/main/CASES" target="_blank" rel="noreferrer"><span>DATA</span><strong>Reproducible Cases ↗</strong></a><a class="resource-link" href="https://www.bilibili.com/video/BV1xfRVBQEFv/" target="_blank" rel="noreferrer"><span>VIDEO</span><strong>Chinese Tutorial ↗</strong></a><a class="resource-link" href="https://www.researchgate.net/publication/400962382" target="_blank" rel="noreferrer"><span>MORE</span><strong>Supplementary Material ↗</strong></a><a class="resource-link" href="https://pypi.org/project/PyXplore/" target="_blank" rel="noreferrer"><span>INSTALL</span><strong>PyPI Package ↗</strong></a></div></div></div></div></section>
+
+    <section class="launch"><div class="wrap"><p class="eyebrow">PyWPEM is open for exploration</p><h2>Refine what matters.<br>Discover what’s next.</h2><p>Explore the documentation, reproduce the research, and bring a more rigorous refinement workflow into your materials program.</p><div class="actions"><a class="button button-primary" href="manual_zh.html">Open the manual</a><a class="button" href="https://github.com/Bin-Cao/PyWPEM" target="_blank" rel="noreferrer">Get the source ↗</a><a class="button" href="https://pyxplore.netlify.app/" target="_blank" rel="noreferrer">Documentation ↗</a></div></div></section>
   </main>
-
-  <footer class="site-footer shell">
-    <p>PyWPEM — Whole-pattern expectation-maximization for AI-driven X-ray diffraction refinement.</p>
-    <p><a href="https://bin-cao.github.io/" target="_blank" rel="noreferrer">Bin Cao</a></p>
-  </footer>
+  <footer class="footer"><div class="wrap"><p>© PyWPEM · Whole-pattern expectation-maximization for XRD refinement.</p><p><a href="https://arxiv.org/abs/2602.16372" target="_blank" rel="noreferrer">Research paper ↗</a> &nbsp; <a href="mailto:bcao686@connect.hkust-gz.edu.cn">Contact</a></p></div></footer>
+  <script>
+    (() => {
+      const copy = {
+        en:{navPlatform:'Platform',navWorkflow:'Workflow',navValidation:'Validation',navResources:'Resources',navManual:'Manual',navGithub:'View on GitHub ↗',heroEyebrow:'Physics-native XRD intelligence',heroTitle:'Make every<br>diffraction pattern <em>actionable.</em>',heroText:'PyWPEM is the whole-pattern refinement platform that turns overlapping X-ray diffraction signals into clear, physically admissible insight—ready for the next decision.',start:'Start exploring',paper:'Read the research ↗',introEyebrow:'A new refinement paradigm',introTitle:'Complex patterns.<br><em>Decisive answers.</em>',introText1:'Conventional fitting struggles when peaks overlap, phases mix, and intensities become non-identifiable. PyWPEM replaces fragile profile matching with a physics-constrained probabilistic view of the entire pattern.',introText2:'The result is a stable, continuous, component-resolved intensity representation that preserves crystallographic rigor while meeting the speed and scale of AI-enabled materials research.',platformEyebrow:'One platform. Clearer materials intelligence.',platformTitle:'Built for the conditions where analysis matters most.',platformText:'A modular scientific toolkit for moving from raw diffraction data to trustworthy structural decisions.'},
+        zh:{navPlatform:'平台能力',navWorkflow:'工作流',navValidation:'验证场景',navResources:'资源中心',navManual:'说明书',navGithub:'查看 GitHub ↗',heroEyebrow:'物理原生的 XRD 智能分析',heroTitle:'让每一张<br>衍射图谱都能<em>驱动决策。</em>',heroText:'PyWPEM 将高度重叠的 X 射线衍射信号转化为清晰、物理可行、可直接用于精修的洞见，为下一步研究决策做好准备。',start:'开始探索',paper:'阅读研究论文 ↗',introEyebrow:'一种全新的精修范式',introTitle:'复杂图谱。<br><em>明确答案。</em>',introText1:'当峰位重叠、相混合、强度难以辨识时，传统拟合往往失效。PyWPEM 以受物理约束的全谱概率模型，取代脆弱的逐峰匹配。',introText2:'它提供连续、稳定、可分辨组分的强度表示，在保持晶体学严谨性的同时，适应 AI 驱动材料研究所需的速度与规模。',platformEyebrow:'一个平台，更清晰的材料洞见。',platformTitle:'为最具挑战的分析条件而构建。',platformText:'从原始衍射数据到可信结构决策的模块化科研工具箱。'},
+        ja:{single:['信号から構造へ','現代の回折科学のための、つながったワークフロー。','実世界での検証','ひとつの手法で、多様な困難な材料課題へ。','プロジェクトリード・著者','結晶学、物理モデリング、AI for Science の交点で PyWPEM を開発しています。','Bin Cao のホームページ ↗','エコシステムを探る','さらに進むために必要なすべて。','PyWPEM は、多相混合物、半結晶ポリマー、その場実験、無秩序酸化物、重なりの強い放射光データで検証されています。','全領域での応用','標準試料から考古学試料まで。','重要なものを精密化する。<br>次の発見へ。','ドキュメントを確認し、研究を再現し、より厳密な精密化を材料研究へ。'],navPlatform:'プラットフォーム',navWorkflow:'ワークフロー',navValidation:'検証',navResources:'リソース',navManual:'マニュアル',navGithub:'GitHubを見る ↗',heroEyebrow:'物理法則に根ざした XRD インテリジェンス',heroTitle:'すべての回折パターンを<br><em>次の発見へ。</em>',heroText:'PyWPEM は、重なり合う X 線回折信号を、物理的に整合した明確な知見へ変換する全パターン精密化プラットフォームです。',start:'はじめる',paper:'研究論文を読む ↗',introEyebrow:'新しい精密化パラダイム',introTitle:'複雑なパターンに。<br><em>確かな答えを。</em>',introText1:'ピークの重なりや混相により強度の識別が難しいとき、従来のフィッティングは不安定になります。PyWPEM は、物理制約付きの確率モデルでパターン全体を扱います。',introText2:'結晶学的な厳密さを保ちながら、AI 活用材料研究に必要な速度とスケールで、安定した成分分解を実現します。',platformEyebrow:'ひとつのプラットフォーム。より明確な材料知能。',platformTitle:'最も難しい解析条件のために。',platformText:'生の回折データから信頼できる構造判断までをつなぐ、モジュール型科学ツールキット。'},
+        ko:{single:['신호에서 구조까지','현대 회절 과학을 위한 연결된 워크플로입니다.','현실 세계에서 검증됨','하나의 방법으로 다양한 난해한 소재 문제를 해결합니다.','프로젝트 리드 및 저자','결정학, 물리 모델링, AI for Science의 접점에서 PyWPEM을 개발하고 있습니다.','Bin Cao 홈페이지 ↗','생태계 살펴보기','더 깊이 탐구하는 데 필요한 모든 것.','PyWPEM은 다상 혼합물, 반결정성 고분자, operando 실험, 무질서 산화물, 중첩이 심한 싱크로트론 데이터에서 검증되었습니다.','전체 영역에서 검증','표준 시료에서 고고학 시료까지.','중요한 것을 정밀화하세요.<br>다음을 발견하세요.','문서를 살펴보고, 연구를 재현하고, 더 엄밀한 정밀화 워크플로를 재료 연구에 적용하세요.'],navPlatform:'플랫폼',navWorkflow:'워크플로',navValidation:'검증',navResources:'리소스',navManual:'매뉴얼',navGithub:'GitHub 보기 ↗',heroEyebrow:'물리 기반 XRD 인텔리전스',heroTitle:'모든 회절 패턴을<br><em>실행 가능한 통찰로.</em>',heroText:'PyWPEM은 겹쳐진 X선 회절 신호를 명확하고 물리적으로 타당한 인사이트로 전환하는 전체 패턴 정밀화 플랫폼입니다.',start:'시작하기',paper:'연구 논문 읽기 ↗',introEyebrow:'새로운 정밀화 패러다임',introTitle:'복잡한 패턴에.<br><em>명확한 해답을.</em>',introText1:'피크 중첩, 혼합 상, 식별하기 어려운 강도에서는 기존 피팅이 불안정해집니다. PyWPEM은 물리 제약 확률 모델로 전체 패턴을 해석합니다.',introText2:'결정학적 엄밀성을 유지하면서 AI 기반 재료 연구에 필요한 속도와 규모로 안정적인 성분 분해를 제공합니다.',platformEyebrow:'하나의 플랫폼. 더 선명한 소재 인텔리전스.',platformTitle:'가장 어려운 분석 조건을 위해 설계되었습니다.',platformText:'원시 회절 데이터부터 신뢰할 수 있는 구조 결정까지 이어 주는 모듈형 과학 도구입니다.'}
+      };
+      const groups = {
+        trust:'.trust span', caps:'.capability h3', capText:'.capability p', flowLabel:'.flow-step b', flowTitle:'.flow-step h3', flowText:'.flow-step p', proofTag:'.proof-card:not(.wide) .eyebrow', proofTitle:'.proof-card:not(.wide) h3', proofText:'.proof-card:not(.wide) p', resourceTag:'.resource-link span', resourceTitle:'.resource-link strong', launchButton:'.launch .button'
+      };
+      const original = Object.fromEntries(Object.entries(groups).map(([key, selector]) => [key, [...document.querySelectorAll(selector)].map(el => el.textContent)]));
+      const singleSelectors = ['.workflow .section-title .eyebrow','.workflow .section-title h2','.proof .section-title .eyebrow','.proof .section-title h2','.author-card .eyebrow','.author-card p','.author-card a','.resources .section-title .eyebrow','.resources .section-title h2','.proof-card.wide > div:last-child > p','.proof-card.wide .eyebrow','.proof-card.wide h3','.launch h2','.launch p:not(.eyebrow)'];
+      const originalSingle = singleSelectors.map(selector => document.querySelector(selector).innerHTML);
+      const stats = {zh:[['6+','科研应用场景'],['开放','代码、案例与工作流'],['AI','原生支持']],ja:[['6+','科学的応用領域'],['オープン','コード・事例・ワークフロー'],['AI','アーキテクチャで対応']],ko:[['6+','과학 응용 영역'],['오픈','코드 · 사례 · 워크플로'],['AI','아키텍처 기본 지원']]};
+      const originalStats = [...document.querySelectorAll('.proof-data strong, .proof-data span')].map(el => el.textContent);
+      const detail = {
+        zh:{single:['从信号到结构','面向现代衍射科学的一体化工作流。','现实世界中的验证','一种方法，多种棘手的材料问题。','项目负责人及作者','在晶体学、物理建模与 AI for Science 的交汇处，推动 PyWPEM 的发展。','访问 Bin Cao 的个人主页 ↗','探索完整生态','继续深入所需的一切资源。','PyWPEM 已在多相混合物、半结晶聚合物、原位实验、无序氧化物和高度重叠的同步辐射数据中得到验证。','全谱应用场景','从参考标准到考古样品。','精修真正重要的部分。<br>探索下一个发现。','探索文档、复现研究，并将更严谨的精修工作流带入您的材料研究。'],trust:['原理即 Bragg 一致性','面向 AI 的工作流','开放科研软件'],caps:['破解峰重叠','始终遵循物理','自信开展精修'],capText:['以责任度加权的软分解，稳定分离严重重叠与混相中的组分。','Bragg 定律直接嵌入优化过程，而非在结果之后补加约束。','为相含量、晶格演变、结构筛选等任务提供可精修的结果。'],flowLabel:['01 / 输入','02 / 建模','03 / 优化','04 / 决策'],flowTitle:['导入图谱','建立物理模型','WPEM 分解','精修并发现'],flowText:['输入实验 XRD 数据、候选物相与材料体系背景。','构建满足 Bragg 一致性的全谱概率混合模型。','通过批量 EM 算法分离重叠峰的组分强度。','导出稳定结果，用于定量精修、AI 假设验证与报告。'],proofTag:['原位 XRD','无序固体'],proofTitle:['看见材料如何实时变化。','筛选更大的结构空间。'],proofText:['以稳定的时间序列精修，追踪电化学循环中的晶格演变。','评估候选占位，在复杂材料中提取更少歧义的信号。'],resourceTag:['指南','指南','代码','文档','研究','数据','视频','更多','安装'],resourceTitle:['中文说明书 →','英文说明书 →','GitHub 仓库 ↗','PyXplore 文档 ↗','阅读论文 ↗','可复现实例 ↗','中文视频教程 ↗','补充材料 ↗','PyPI 软件包 ↗'],launchButton:['打开说明书','获取源代码 ↗','访问文档 ↗']},
+        ja:{trust:['Bragg 整合設計','AI 対応ワークフロー','オープンサイエンス'],caps:['重なりを分解','物理性を維持','確信を持って精密化'],capText:['責任度に基づくソフト分解により、強いピーク重なりや混相の成分を分離します。','Bragg の整合性を後処理ではなく最適化そのものに組み込みます。','相分率、格子変化、構造スクリーニングのための精密化可能な結果を提供します。'],flowLabel:['01 / 入力','02 / モデル','03 / 最適化','04 / 判断'],flowTitle:['パターンを入力','物理を記述','WPEM で分解','精密化して発見'],flowText:['実験 XRD データ、候補相、材料の文脈から開始します。','Bragg 整合性を満たす全パターン確率混合モデルを構築します。','バッチ EM により重なった成分強度を分離します。','定量精密化、AI 仮説検証、報告のために安定した結果を出力します。'],proofTag:['その場 XRD','無秩序固体'],proofTitle:['変化を、その瞬間に見る。','構造空間を探索する。'],proofText:['安定した時系列精密化により、電気化学サイクル中の格子変化を追跡します。','候補占有を評価し、複雑な材料から曖昧さの少ない信号を抽出します。'],resourceTag:['ガイド','ガイド','コード','文書','研究','データ','動画','詳細','導入'],resourceTitle:['中国語マニュアル →','英語マニュアル →','GitHub リポジトリ ↗','PyXplore 文書 ↗','論文を読む ↗','再現可能な事例 ↗','中国語動画チュートリアル ↗','補足資料 ↗','PyPI パッケージ ↗'],launchButton:['マニュアルを開く','ソースを取得 ↗','文書を見る ↗']},
+        ko:{trust:['Bragg 일관성 설계','AI 지원 워크플로','오픈 과학 소프트웨어'],caps:['피크 중첩 해소','물리적 타당성 유지','확신 있는 정밀화'],capText:['책임도 기반 소프트 분해로 심한 피크 중첩과 혼합상의 성분을 분리합니다.','Bragg 일관성을 사후 보정이 아닌 최적화 자체에 내장합니다.','상 분율, 격자 변화, 구조 탐색에 바로 사용할 수 있는 정밀화 결과를 제공합니다.'],flowLabel:['01 / 입력','02 / 모델','03 / 최적화','04 / 결정'],flowTitle:['패턴 가져오기','물리 모델 구축','WPEM으로 분해','정밀화와 발견'],flowText:['실험 XRD 데이터, 후보 상, 재료 시스템 정보를 입력합니다.','Bragg 일관성을 만족하는 전체 패턴 확률 혼합 모델을 만듭니다.','배치 EM으로 중첩된 성분 강도를 분리합니다.','정량 정밀화, AI 가설 검증, 보고를 위한 안정적인 결과를 내보냅니다.'],proofTag:['Operando XRD','무질서 고체'],proofTitle:['변화를 실시간으로 확인하세요.','구조 공간을 탐색하세요.'],proofText:['안정적인 시계열 정밀화로 전기화학 사이클 중 격자 변화를 추적합니다.','후보 점유를 평가하고 복잡한 재료에서 모호성이 적은 신호를 얻습니다.'],resourceTag:['가이드','가이드','코드','문서','연구','데이터','영상','추가','설치'],resourceTitle:['중국어 매뉴얼 →','영문 매뉴얼 →','GitHub 저장소 ↗','PyXplore 문서 ↗','논문 읽기 ↗','재현 가능한 사례 ↗','중국어 영상 튜토리얼 ↗','보충 자료 ↗','PyPI 패키지 ↗'],launchButton:['매뉴얼 열기','소스 받기 ↗','문서 보기 ↗']}
+      };
+      const setGroup = (key, values) => document.querySelectorAll(groups[key]).forEach((el, index) => { el.textContent = values[index] || el.textContent; });
+      const setLanguage = lang => {
+        const strings = copy[lang] || copy.en;
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+        document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = strings[el.dataset.i18n] || el.textContent; });
+        document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = strings[el.dataset.i18nHtml] || el.innerHTML; });
+        const manual = lang === 'zh' ? 'manual_zh.html' : 'manual_en.html';
+        document.querySelector('[data-i18n="navManual"]').href = manual;
+        document.querySelector('[data-i18n="start"]').href = manual;
+        const languageDetail = detail[lang];
+        Object.entries(groups).forEach(([key]) => setGroup(key, languageDetail?.[key] || original[key]));
+        singleSelectors.forEach((selector, index) => { document.querySelector(selector).innerHTML = languageDetail?.single?.[index] || originalSingle[index]; });
+        if (stats[lang]) { document.querySelectorAll('.proof-data strong').forEach((el, index) => el.textContent = stats[lang][index][0]); document.querySelectorAll('.proof-data span').forEach((el, index) => el.textContent = stats[lang][index][1]); } else { document.querySelectorAll('.proof-data strong, .proof-data span').forEach((el, index) => el.textContent = originalStats[index]); }
+        document.querySelectorAll('[data-lang]').forEach(button => button.classList.toggle('active', button.dataset.lang === lang));
+        localStorage.setItem('pywpem-language', lang);
+      };
+      const saved = localStorage.getItem('pywpem-language');
+      setLanguage(copy[saved] ? saved : 'en');
+      document.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => setLanguage(button.dataset.lang)));
+    })();
+  </script>
 </body>
 </html>

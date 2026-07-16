@@ -1,5 +1,8 @@
 <h1 align="center">PyWPEM</h1>
 
+> [!TIP]
+> **Découvrez la page d’accueil de PyWPEM :** [https://bin-cao.github.io/PyWPEM/](https://bin-cao.github.io/PyWPEM/)
+
 <p align="center">
   <strong>Un framework de raffinement par motif complet de nouvelle génération pour l'analyse de structures cristallines complexes.</strong>
 </p>

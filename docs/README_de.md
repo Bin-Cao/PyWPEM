@@ -1,5 +1,8 @@
 <h1 align="center">PyWPEM</h1>
 
+> [!TIP]
+> **Entdecken Sie die PyWPEM-Produktseite:** [https://bin-cao.github.io/PyWPEM/](https://bin-cao.github.io/PyWPEM/)
+
 <p align="center">
   <strong>Ein Whole-Pattern-Refinement-Framework der nächsten Generation für die Analyse komplexer Kristallstrukturen.</strong>
 </p>
