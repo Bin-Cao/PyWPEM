@@ -1,0 +1,4 @@
+interface:
+  display_name: "WPEM Workflow"
+  short_description: "Run and tune reproducible PyWPEM XRD workflows."
+  default_prompt: "Use $wpem-skill to validate, run, and tune a PyWPEM XRD refinement."
