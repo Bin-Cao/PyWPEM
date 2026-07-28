@@ -98,7 +98,7 @@ It integrates:
 * Amorphous phase quantification
 * AI-driven structural refinement
 
-The toolkit is designed for reproducible scientific workflows in materials characterization and AI for Science research.
+The toolkit is designed for reproducible scientific workflows in materials characterization and AI for Science research
 
 ---
 
