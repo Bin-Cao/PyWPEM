@@ -13,6 +13,7 @@ from .DecomposePlot.plot import Decomposedpeaks
 from .XRDSimulation.Simulation import XRD_profile
 from .Extinction.XRDpre import profile
 from .StructureOpt.SiteOpt import BgolearnOpt
+from .StructureSolver.solver import PYXPLORE_CIF_STAMP, StructureSolver, solve_structure
 from .WPEMXPS.XPSEM import XPSsolver
 from .WPEMXAS.EXAFS import EXAFS
 from .GraphStructure.graph import CrystalGraph
@@ -22,6 +23,9 @@ import numpy as np
 from time import time
 import datetime
 import os
+from pathlib import Path
+
+from .Extinction.CifReader import CifFile
 
 
 logo = '''
@@ -47,7 +51,8 @@ print('='*100)
 def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_file, bacground_file, density_list=None, two_theta_range = None,structure_factor = None, 
         bta=0.8, bta_threshold = 0.5,limit=0.0005, iter_limit=0.05, w_limit=1e-17, iter_max=40, lock_num = 2, asy_C=0.5, s_angle=50, 
         subset_number=9, low_bound=65, up_bound=80, InitializationEpoch=2, MODEL = 'REFINEMENT', Macromolecule =False, cpu = 4, num =3, EXACT = False,
-        Cu_tao = None, Ave_Waves = False,loadParams=False, ZeroShift=False,work_dir=None):
+        Cu_tao = None, Ave_Waves = False,loadParams=False, ZeroShift=False,work_dir=None,
+        cif_files=None, cif_output_dir=None):
     """
     :param wavelength: list type, The wavelength of diffraction waves
     :param Var: a constant or a array, Statistical variance of background 
@@ -83,6 +88,11 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     :param Ave_Waves: A boolean, default is False. Set to True to optimize using the average wavelength of Kα1 and Kα2.
     :param loadParams : Boolean default = False, for loading parameters
     :param ZeroShift : If ZeroShift == True and the standard sample is available, the instrument offset can be calibrated
+    :param cif_files: Optional path (or paths) to restrict CIF export
+        candidates. ``CIFpreprocess`` records are matched to phases by crystal
+        system and HKL set; input order is never used.
+    :param cif_output_dir: Optional directory for refined CIFs. Defaults to
+        ``WPEMFittingResults`` in ``work_dir``.
     :return: An instantiated model
     """
     
@@ -151,12 +161,167 @@ def XRDfit(wavelength, Var, Lattice_constants, no_bac_intensity_file, original_f
     elif flag == -1:
         print('The three input files do not match!')
 
+    if flag != -1:
+        output_dir = cif_output_dir
+        if output_dir is None:
+            output_dir = os.path.join(work_dir, 'WPEMFittingResults')
+        phase_hkls = [_read_hkl_file(path) for path in initial_peak_file]
+        saved_cifs = export_refined_cifs(
+            cif_files, ini_CL, output_dir, phase_hkls=phase_hkls,
+            metadata_dir=os.path.join(work_dir, 'output_xrd', 'structure_metadata'),
+        )
+        for saved_cif in saved_cifs:
+            print('Refined CIF saved to:', saved_cif)
+
     endtime = time()
     Durtime = "%.0f hours " % int((endtime - time0) / 3600) + "%.0f minute  " % int(
         ((endtime - time0) / 60) % 60) + "%.0f second  " % ((endtime - time0) % 60)
     print('\n')
     print('WPEM program running time : ', Durtime)
     return Durtime, ini_CL
+
+
+def export_refined_cifs(cif_files, lattice_constants, output_dir=None,
+                        phase_hkls=None, metadata_dir=None):
+    """Write refined CIFs by updating the unit cell of CIF templates.
+
+    XRD whole-pattern refinement determines lattice constants, not atomic
+    coordinates. This helper uses the binary structure records written by
+    ``CIFpreprocess`` to match each refined phase to its HKL set. Each binary
+    record also retains the CIF space-group and symmetry information. Initial
+    lattice constants are deliberately not used as a matching condition, since
+    their numerical values may differ before refinement. The exporter then
+    preserves the matched structure's atom sites, occupancies, and symmetry
+    operations while updating only the six ``_cell_*`` fields.
+
+    Args:
+        cif_files: Optional CIF path or paths to restrict the candidates. The
+            order is not used for matching.
+        lattice_constants: Refined ``[[a, b, c, alpha, beta, gamma], ...]``.
+        output_dir: Directory for the output files. Defaults to the current
+            directory when called directly.
+        phase_hkls: HKL arrays used for each XRDfit phase. Required to perform
+            safe automatic matching.
+        metadata_dir: Directory containing ``CIFpreprocess`` binary records.
+
+    Returns:
+        A list of paths to the written CIF files.
+    """
+    destination = Path(output_dir) if output_dir is not None else Path.cwd()
+    destination.mkdir(parents=True, exist_ok=True)
+    cell_keys = (
+        '_cell_length_a', '_cell_length_b', '_cell_length_c',
+        '_cell_angle_alpha', '_cell_angle_beta', '_cell_angle_gamma',
+    )
+    if phase_hkls is None:
+        raise ValueError('phase_hkls is required so refined CIFs cannot be matched incorrectly.')
+    if len(phase_hkls) != len(lattice_constants):
+        raise ValueError('phase_hkls must contain one HKL array for each refined phase.')
+
+    metadata_dir = Path(metadata_dir) if metadata_dir is not None else Path('output_xrd/structure_metadata')
+    candidates = _load_structure_metadata(metadata_dir)
+    if not candidates:
+        if cif_files is None:
+            return []
+        raise ValueError('No CIFpreprocess structure metadata was found for CIF export.')
+
+    if cif_files is not None:
+        if isinstance(cif_files, (str, os.PathLike)):
+            cif_files = [cif_files]
+        allowed_paths = {str(Path(path).resolve()) for path in cif_files}
+        candidates = [item for item in candidates if item['source_path'] in allowed_paths]
+        if not candidates:
+            raise ValueError('None of cif_files has a matching CIFpreprocess metadata record.')
+
+    matched = _match_structure_metadata(candidates, lattice_constants, phase_hkls)
+    saved_paths = []
+    for phase, (record, cell) in enumerate(zip(matched, lattice_constants)):
+        if len(cell) != 6:
+            raise ValueError('Each refined lattice-constant entry must contain six values.')
+
+        cif_path = Path(record['source_path'])
+        cif = CifFile.from_string(record['raw_cif'])
+        # Refined CIFs are PyXplore/WPEM outputs, not pymatgen-generated files.
+        cif.comment = PYXPLORE_CIF_STAMP
+        if not cif.data:
+            raise ValueError('No structural data block found in CIF: {}'.format(cif_path))
+
+        # A multi-block CIF can contain more than one structural block. Apply
+        # the refined cell consistently to every retained structural block.
+        for block in cif.data.values():
+            for key, value in zip(cell_keys, cell):
+                block.data[key] = '{:.8f}'.format(float(value))
+
+        filename = '{}_refined.cif'.format(cif_path.stem)
+        output_path = destination / filename
+        if output_path.exists():
+            output_path = destination / '{}_phase{}_refined.cif'.format(
+                cif_path.stem, phase + 1
+            )
+        output_path.write_text(str(cif), encoding='utf-8')
+        saved_paths.append(str(output_path))
+
+    return saved_paths
+
+
+def _read_hkl_file(path):
+    """Read a peak file into an integer HKL array without relying on row order."""
+    data = np.genfromtxt(path, delimiter=',', names=True, dtype=None, encoding=None)
+    if data.size == 0 or not {'H', 'K', 'L'}.issubset(data.dtype.names):
+        raise ValueError('Peak file does not contain H, K, and L columns: {}'.format(path))
+    data = np.atleast_1d(data)
+    return np.column_stack((data['H'], data['K'], data['L'])).astype(int)
+
+
+def _load_structure_metadata(metadata_dir):
+    if not metadata_dir.is_dir():
+        return []
+    records = []
+    for path in metadata_dir.glob('*.npz'):
+        with np.load(path, allow_pickle=False) as record:
+            required = {'source_path', 'raw_cif', 'crystal_system', 'hkl'}
+            if not required.issubset(record.files):
+                continue
+            records.append({
+                'source_path': str(record['source_path'].item()),
+                'raw_cif': str(record['raw_cif'].item()),
+                'crystal_system': int(record['crystal_system'].item()),
+                'hkl': np.asarray(record['hkl'], dtype=int),
+            })
+    return records
+
+
+def _match_structure_metadata(candidates, lattice_constants, phase_hkls):
+    """Match phases by HKL set; reject every ambiguous mapping.
+
+    The HKL set was calculated from the cached CIF space group and symmetry.
+    Do not compare initial lattice parameters here: a, b, c and the angles are
+    precisely the values that can change during refinement.
+    """
+    available = list(candidates)
+    matched = []
+    for phase, (cell, hkl) in enumerate(zip(lattice_constants, phase_hkls)):
+        phase_set = {tuple(row) for row in np.asarray(hkl, dtype=int)}
+        exact_matches = []
+        subset_matches = []
+        for candidate in available:
+            candidate_set = {tuple(row) for row in candidate['hkl']}
+            if phase_set == candidate_set:
+                exact_matches.append(candidate)
+            elif phase_set and phase_set.issubset(candidate_set):
+                subset_matches.append(candidate)
+
+        choices = exact_matches if exact_matches else subset_matches
+        if len(choices) != 1:
+            raise ValueError(
+                'Unable to uniquely match refined phase {} to a CIFpreprocess record '
+                '(matched {} candidates). CIF export was stopped to avoid writing '
+                'the wrong structure.'.format(phase, len(choices))
+            )
+        selected = choices[0]
+        matched.append(selected)
+        available.remove(selected)
+    return matched
 
 def BackgroundFit(intensity_csv, LFctg = 0.5, lowAngleRange=None, bac_num=None, bac_split=5, window_length=17, 
                     polyorder=3, poly_n=6, mode='nearest', bac_var_type='constant', Model='XRD',noise=None,segment=None,work_dir=None, **kwargs):
@@ -569,6 +734,78 @@ def CryGraph(folder_path,BK_boundary_condition = False,work_dir=None):
     y_ls = np.load('./CifParserToGraph/Y_system.npy')
     """
     CrystalGraph(folder_path,work_dir).generate_graph(BK_boundary_condition)
+
+
+def StructureSolve(no_bac_intensity_file, cif_file, wavelength='CuKa', num_peaks=None,
+                   work_dir=None, max_nfev=120, peak_tolerance=0.35,
+                   min_improvement=0.02, coordinate_window=0.01,
+                   cell_window=0.35):
+    """Use strong XRD peaks to pre-solve a CIF before ``XRDfit`` refinement.
+
+    Parameters
+    ----------
+    no_bac_intensity_file : str or pathlib.Path
+        Path of the background-subtracted XRD CSV, normally generated by
+        ``TwiceFilter.FFTandSGFilter`` as ``no_bac_intensity.csv``.  The first
+        two columns must be 2theta (degrees) and intensity.
+    cif_file : str or pathlib.Path
+        Path of the initial CIF to optimize.  When all acceptance checks pass,
+        this file is overwritten by the solved CIF; otherwise it is unchanged.
+    wavelength : str or float, default='CuKa'
+        Incident X-ray wavelength. Use a built-in WPEM radiation name such as
+        ``'CuKa'``, or give a numerical wavelength in angstrom, e.g. 1.54056.
+        It must agree with the XRD measurement.
+    num_peaks : int or None, default=None
+        Number of strongest resolved experimental peaks used for the solve.
+        ``None`` automatically chooses 6--16 clear strong peaks. Set an
+        integer such as 8 or 10 to use exactly that many when available.
+    work_dir : str or pathlib.Path or None, default=None
+        Parent directory for ``WPEMFittingResults``. If ``None``, the result
+        directory is created beside ``cif_file``.
+    max_nfev : int, default=120
+        Maximum nonlinear least-squares evaluations. Increase this (e.g. 200)
+        for structures with many independent atomic sites; it increases time.
+    peak_tolerance : float, default=0.35
+        Maximum allowed calculated-vs-observed peak-position difference in
+        2theta degrees for a peak to count as matched in final acceptance.
+    min_improvement : float, default=0.02
+        Minimum fractional score improvement required to overwrite the CIF.
+        ``0.02`` means the final score must improve by at least 2%.
+    coordinate_window : float, default=0.01
+        Local search half-width for every fractional atomic coordinate. For
+        example, 0.01 searches each initial x/y/z within plus or minus 0.01.
+        This deliberately tight default prevents arbitrary atomic-site changes;
+        the result is also rejected if the calculated space group changes.
+    cell_window : float, default=0.35
+        Relative local search half-width for lattice lengths. ``0.35`` permits
+        a, b and c to vary from 65% to 135% of their initial values, subject to
+        the crystal-system constraints (for example, trigonal a=b is retained).
+
+    Returns
+    -------
+    dict
+        ``accepted`` says whether the CIF was replaced. ``reason`` explains
+        rejection or acceptance; ``solved_cell`` contains six solved lattice
+        constants; ``candidate_cif`` always points to the best solved CIF in
+        ``WPEMFittingResults``; ``backup_cif`` is present only after a
+        successful overwrite; and ``report_file`` points to the JSON
+        diagnostic report.
+
+    Notes
+    -----
+    The candidate must preserve the detected crystal system and space group,
+    match at least 70% of the selected peaks, converge, and satisfy
+    ``min_improvement``. The original CIF is backed up to
+    ``WPEMFittingResults`` immediately before an accepted overwrite. A report
+    is written there whether the solve is accepted or rejected. The best
+    candidate CIF is also always retained there, including after rejection.
+    """
+    return solve_structure(
+        no_bac_intensity_file, cif_file, wavelength=wavelength,
+        num_peaks=num_peaks, work_dir=work_dir, max_nfev=max_nfev,
+        peak_tolerance=peak_tolerance, min_improvement=min_improvement,
+        coordinate_window=coordinate_window, cell_window=cell_window,
+    )
 
 
 

@@ -6,6 +6,7 @@ URL : https://github.com/Bin-Cao/PyWPEM
 """
 
 import os
+import hashlib
 import warnings
 import sympy
 from sympy import symbols, cos, sin
@@ -138,6 +139,11 @@ class profile:
         difc_peak.sort_values(by=['2theta/TOF'], ascending=True, inplace=True)
         
         difc_peak.to_csv(os.path.join(self.opxrdfolder,'{}HKL.csv'.format(filepath[-11:-4])),index=False)
+        self._save_structure_metadata(
+            filepath, latt, AtomCoordinates, Point_group, space_g,
+            symmetric_operation, Asymmetric_atomic_coordinates[0], system,
+            difc_peak[['H', 'K', 'L']].to_numpy(),
+        )
         # difc_peak.to_csv('output_xrd/{}_extinction.csv'.format(filepath[-11:-4]))
 
         ex_peak = pd.DataFrame(ex_HKL,columns=['H','K','L'])
@@ -173,6 +179,37 @@ class profile:
 
 
         return latt, AtomCoordinates,lattic_density
+
+    def _save_structure_metadata(self, filepath, latt, atom_coordinates,
+                                 point_group, space_group, symmetry_operations,
+                                 space_group_number, crystal_system, hkl):
+        """Persist the structure behind an HKL list for safe WPEM export.
+
+        The binary record is intentionally stored next to the generated HKL
+        files.  It lets ``XRDfit`` recover the correct input structure even
+        when several phases were preprocessed before a joint refinement.
+        """
+        source = os.path.abspath(filepath)
+        with open(filepath, 'r', encoding='utf-8', errors='replace') as handle:
+            raw_cif = handle.read()
+        fingerprint = hashlib.sha256(source.encode('utf-8')).hexdigest()[:16]
+        metadata_dir = os.path.join(self.opxrdfolder, 'structure_metadata')
+        os.makedirs(metadata_dir, exist_ok=True)
+        np.savez_compressed(
+            os.path.join(metadata_dir, '{}.npz'.format(fingerprint)),
+            source_path=np.array(source),
+            raw_cif=np.array(raw_cif),
+            lattice=np.asarray(latt, dtype=float),
+            atom_coordinates=np.asarray(atom_coordinates, dtype=str),
+            point_group=np.array('' if point_group is None else str(point_group)),
+            space_group=np.asarray([] if space_group is None else space_group, dtype=str),
+            space_group_number=np.array(int(space_group_number)),
+            symmetry_operations=np.asarray(
+                [] if symmetry_operations is None else symmetry_operations, dtype=str
+            ),
+            crystal_system=np.array(int(crystal_system)),
+            hkl=np.asarray(hkl, dtype=int),
+        )
 
 ########################################################################
 def getFloat(s):
