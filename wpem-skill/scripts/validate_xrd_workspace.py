@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the filesystem inputs required by a PyWPEM XRD refinement."""
+"""Validate the filesystem inputs required by a PyXplore WPEM XRD refinement."""
 
 from __future__ import annotations
 
@@ -40,12 +40,24 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("work_dir", type=Path)
     parser.add_argument("--phases", type=int, required=True)
+    parser.add_argument(
+        "--cif",
+        type=Path,
+        action="append",
+        required=True,
+        help="candidate CIF path; repeat once for each phase",
+    )
     parser.add_argument("--require-refinement", action="store_true")
     args = parser.parse_args()
 
     errors: list[str] = []
     if args.phases < 1:
         errors.append("--phases must be at least 1")
+    if len(args.cif) != args.phases:
+        errors.append("the number of --cif arguments must equal --phases")
+    for cif_path in args.cif:
+        if not cif_path.expanduser().is_file():
+            errors.append(f"missing or unreadable CIF: {cif_path}")
     root = args.work_dir.expanduser().resolve()
     intensity = root / "intensity.csv"
     if not root.is_dir():

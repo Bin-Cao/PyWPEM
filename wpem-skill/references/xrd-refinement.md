@@ -1,49 +1,83 @@
-# PyWPEM XRD refinement reference
+# PyXplore WPEM XRD refinement reference
 
-## Required artifacts
+## Required artifacts and phase order
 
-`XRDfit` consumes three two-column CSV files: the original experimental pattern, the background fit, and the background-subtracted pattern. In a dedicated workspace, `BackgroundFit` creates the latter two under `ConvertedDocuments/`. The refinement also reads `peak0.csv` through `peakN.csv` directly from `work_dir`.
+Before each workflow, run `python3 -m pip install --upgrade PyXplore`. It installs PyXplore when missing, checks for a newer PyPI release, and upgrades only if necessary. Confirm the package is usable with `python3 -c "from PyXplore import WPEM"`; stop and report any installation or import failure.
 
-For phase index `i`, maintain this alignment:
+Before any refinement, obtain an experimental XRD pattern and one CIF for each candidate phase. If either is missing, ask the user to provide it; never infer or fabricate either input.
 
-| Phase index | CIF | `Lattice_constants[i]` | `density_list[i]` | Peak file |
-| --- | --- | --- | --- | --- |
-| 0 | phase 0 | phase 0 values | phase 0 density | `peak0.csv` |
-| 1 | phase 1 | phase 1 values | phase 1 density | `peak1.csv` |
+`intensity.csv` is a headerless two-column CSV: increasing 2θ then non-negative intensity. `BackgroundFit` creates the background-subtracted pattern and fitted background under `ConvertedDocuments/`; `XRDfit` consumes all three files. To normalize a noncompliant but parseable text, CSV, or TSV input, run:
 
-The XRD data files are headerless two-column CSVs. PyWPEM reads them as 2θ and intensity. Initial peak files use the expected WPEM peak-list schema, including a `2theta/TOF` column.
+```bash
+python3 /absolute/path/to/wpem-skill/scripts/normalize_xrd_csv.py INPUT OUTPUT
+```
 
-## Parameter defaults and constraints
+The converter preserves the source file and writes a headerless two-column CSV. Default columns are 0 (2θ) and 1 (intensity); specify `--angle-column N --intensity-column M` when needed. Do not guess an ambiguous column mapping.
 
-| Function | Parameter | Default | Constraint / use |
-| --- | --- | --- | --- |
-| `BackgroundFit` | `window_length` | 17 | Positive odd integer; greater than `polyorder`; no larger than the data length for `mode="interp"`. |
-| `BackgroundFit` | `polyorder` | 3 | Lower than `window_length`. |
-| `BackgroundFit` | `bac_split` | 5 | Positive integer for automatic segmentation. |
-| `XRDfit` | `bta` | 0.8 | Lorentzian fraction; keep in [0, 1]. |
-| `XRDfit` | `bta_threshold` | 0.5 | Lower bound for `bta`; keep in [0, `bta`]. |
-| `XRDfit` | `limit` | 0.0005 | Lower bound for peak sigma²; positive. |
-| `XRDfit` | `iter_limit` | 0.05 | Likelihood-improvement threshold; positive. |
-| `XRDfit` | `w_limit` | 1e-17 | Minimum peak weight; positive. |
-| `XRDfit` | `iter_max` | 40 | Positive iteration cap. |
-| `XRDfit` | `lock_num` | 2 | Stop after this many decreasing likelihood iterations. |
-| `XRDfit` | `InitializationEpoch` | 2 | Initial epochs with peak locations frozen. |
+For each phase, preserve this sequence and order:
 
-`XRDfit` returns `(duration, initial_lattices)`. Its console reports convergence state and Rp/Rwp. A flag of 1 is convergence; 2 is epsilon/weight limit; 3 is iteration cap; 4 is the likelihood-decrease lock. Treat flags 2–4 as diagnostic stopping states, not automatic success.
+| Phase index | Candidate CIF | `StructureSolve` | `CIFpreprocess` result | `Lattice_constants[i]` | Peak file |
+| --- | --- | --- | --- | --- | --- |
+| 0 | phase 0 | first | `latt0` | `latt0` | `peak0.csv` |
+| 1 | phase 1 | first | `latt1` | `latt1` | `peak1.csv` |
 
-## Output locations
+`StructureSolve` is available in PyXplore WPEM v2026.8.17 and later. It accepts the background-subtracted pattern plus a CIF and must run before that CIF's `CIFpreprocess`; it pre-optimizes the input structure for the subsequent workflow.
 
-- `ConvertedDocuments/`: background-processing outputs.
-- `WPEMFittingResults/`: fit profiles, R-factor/log-likelihood plots, lattice and mass-fraction outputs.
-- `DecomposedComponents/`: phase-resolved profiles and updated background.
-- `output_xrd/`: CIF preprocessing outputs.
+`CIFpreprocess` generates `output_xrd/<cif-stem>HKL.csv`. Before calling `XRDfit`, each phase must have a root-level `peak<i>.csv`. If one is missing, copy the generated HKL file to `peak<i>.csv`; `i` must equal that phase's position in `Lattice_constants`. Never reorder, combine, or otherwise edit the generated peak list.
+
+## Call contracts
+
+```python
+from PyXplore import WPEM
+import pandas as pd
+
+intensity_csv = pd.read_csv("intensity.csv", header=None)
+var = WPEM.BackgroundFit(intensity_csv, lowAngleRange=17, poly_n=13,
+                         bac_split=16, bac_num=300)
+
+WPEM.StructureSolve(
+    no_bac_intensity_file="./ConvertedDocuments/no_bac_intensity.csv",
+    cif_file="phase.cif",
+)
+latt, atom_coordinates, description = WPEM.CIFpreprocess(
+    filepath="phase.cif", two_theta_range=(15, 75)
+)
+
+from pathlib import Path
+from shutil import copy2
+
+# Required only when peak0.csv does not already exist.
+if not Path("peak0.csv").is_file():
+    copy2("output_xrd/phaseHKL.csv", "peak0.csv")
+
+WPEM.XRDfit(
+    wavelength=[1.540593, 1.544414], Var=var,
+    Lattice_constants=[latt],
+    no_bac_intensity_file="./ConvertedDocuments/no_bac_intensity.csv",
+    original_file="intensity.csv",
+    bacground_file="./ConvertedDocuments/bac.csv",
+    subset_number=11, low_bound=20, up_bound=70,
+    bta=0.85, iter_max=5, asy_C=0, InitializationEpoch=0,
+)
+```
+
+The `bacground_file` spelling above matches the WPEM argument name. Retain it exactly unless the installed package's signature shows a different version-specific API.
 
 ## Safe tuning order
 
-1. Correct input file schema, range, wavelength, phase alignment, and `peakN.csv` files.
-2. Tune background settings and regenerate background outputs.
-3. Re-run with default optimizer values.
-4. Tune initialization and convergence controls.
-5. Tune peak-shape bounds only if the data supports it.
+1. Correct input file schema, 2θ coverage, wavelength, phase order, and generated `peakN.csv` files.
+2. Tune `BackgroundFit` parameters and regenerate all downstream artifacts, including `StructureSolve` results.
+3. Make a baseline refinement.
+4. Tune convergence/range controls: `InitializationEpoch`, `iter_max`, `subset_number`, `low_bound`, and `up_bound`.
+5. Tune peak shape (`bta`) only if the data supports it.
 
-Avoid accepting any refinement that produces negative/implausible phase quantities, lattice constants inconsistent with the selected phase, or residual structure that indicates missing phases or background mismatch.
+Avoid accepting a refinement with negative or implausible phase quantities, lattice constants inconsistent with the selected phase, or residual structure indicating missing phases or a background mismatch.
+
+## Outputs to inspect
+
+- `ConvertedDocuments/`: background-processing outputs.
+- `WPEMFittingResults/`: fit profiles and refinement diagnostics.
+- `DecomposedComponents/`: phase-resolved profiles and updated background.
+- `output_xrd/`: CIF-preprocessing outputs.
+
+Inspect the actual run directory after each call; output directory names can vary by installed PyXplore release.
